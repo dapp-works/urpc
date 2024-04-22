@@ -7,6 +7,8 @@ bun add @dappworks/urpc
 ```
 
 ```ts
+import URPC from "@dappworks/urpc";
+
 const urpc = new URPC({
   schemas: {
     sum: URPC.Func({
