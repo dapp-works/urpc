@@ -1,0 +1,33 @@
+{
+  "name": "@dappworks/urpc",
+  "version": "0.0.1",
+  "module": "index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "bun run build.mjs",
+    "prepublishOnly": "bun run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "bun-plugin-dts": "^0.2.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "homepage": "https://github.com/dapp-works/urpc",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dapp-works/urpc.git"
+  },
+  "bugs": "https://github.com/dapp-works/urpc/issues",
+  "author": "uuz <ncysatnaf@gmail.com>",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  }
+}
