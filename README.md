@@ -37,7 +37,7 @@ const client = createSimpleHttpClient<typeof urpc.schemas>({
   url: "http://localhost:3000/urpc",
 });
 client.func.call();
-client.var.overwrite();
+client.var.set();
 client.schema.loadFull();
 client.schema.loadVars();
 ```

@@ -40,12 +40,12 @@ export const createSimpleHttpClient = <T extends URPC_Schema>(args: { url: strin
 
         },
         var: {
-            async overwrite(params: { name: string, value: any }) {
+            async set<R extends keyof T, V extends T[R] extends URPC_Variable<infer Z, any> ? Z : never>(params: { name: R, value: ReturnType<V> }) {
                 return fetch(`${args.url}`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        name: "var.overwrite",
+                        name: "var.set",
                         params
                     })
                 }).then(res => res.json())
@@ -69,7 +69,7 @@ export const createServerClient = <T extends URPC_Schema>({ urpc }: { urpc: URPC
         urpc,
         handle({ name, params }: { name: string, params: Record<string, any> }) {
             const func = get(client, name)
-            console.log(name, params)
+            // console.log(name, params)
             if (!func) {
                 throw new Error("invalid name")
             }
@@ -93,7 +93,7 @@ export const createServerClient = <T extends URPC_Schema>({ urpc }: { urpc: URPC
             }
         },
         var: {
-            async overwrite(params: { name: string, value: any }) {
+            async set(params: { name: string, value: any }) {
                 const uvar = urpc.schemas[params.name] as URPC_Variable
                 if (!uvar) {
                     throw new Error("invalid var name")
@@ -101,7 +101,7 @@ export const createServerClient = <T extends URPC_Schema>({ urpc }: { urpc: URPC
                 if (!uvar.set) {
                     throw new Error("variable can't be set")
                 }
-                return uvar.set({ value: params.value })
+                return uvar.set(params.value)
             },
             async patch(params: { name: string, value: any }) {
                 throw new Error("TBD")

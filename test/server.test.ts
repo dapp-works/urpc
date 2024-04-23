@@ -7,13 +7,17 @@ const client = createSimpleHttpClient<typeof urpc.schemas>({ url: "http://localh
 
 
 describe('should', () => {
-    it('export 3', async () => {
-        console.log(await client.func.call({
-            method: "sum", input: { a: 1, b: 2 }
-        }))
+    it('', async () => {
         expect(await client.func.call({
             method: "sum", input: { a: 1, b: 2 }
         })).toBe(3)
     })
+
+    it('2', async () => {
+        expect((await client.var.set({
+            name: "data", value: { foo: 456 }
+        })).foo).toBe(456)
+    })
+
 
 })
