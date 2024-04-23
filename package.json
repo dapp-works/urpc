@@ -1,6 +1,6 @@
 {
   "name": "@dappworks/urpc",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "module": "index.ts",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -14,7 +14,9 @@
   "license": "MIT",
   "devDependencies": {
     "@types/bun": "latest",
-    "bun-plugin-dts": "^0.2.3"
+    "@types/lodash.get": "^4.4.9",
+    "bun-plugin-dts": "^0.2.3",
+    "hono": "^4.2.6"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
@@ -29,5 +31,8 @@
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
+  },
+  "dependencies": {
+    "lodash.get": "^4.4.2"
   }
 }

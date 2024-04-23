@@ -19,10 +19,22 @@ const urpc = new URPC({
   },
 });
 
-urpc.loadFull();
-urpc.loadVars();
-urpc.schemas.sum.func({ input: { a: 1, b: 2 } });
-urpc.schemas.foo.get();
+const serverClient = createServerClient({ urpc });
+const app = new Hono();
+app.post("/urpc", async (c) => {
+  const body = (await c.req.json()) as any;
+  const res = await serverClient.handle(body);
+  return c.json(res);
+});
+
+// client
+const client = createSimpleHttpClient<typeof urpc.schemas>({
+  url: "http://localhost:3000/urpc",
+});
+client.func.call();
+client.var.overwrite();
+client.schema.loadFull();
+client.schema.loadVars();
 ```
 
 To run:

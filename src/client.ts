@@ -1,12 +1,11 @@
-import type { URPC_Schema } from "../dist"
-import type { URPC_Function, URPC_Variable, URPC } from "./index"
+import type { URPC_Function, URPC_Variable, URPC, URPC_Schema } from "./index"
+import get from "lodash.get"
 
 
-
-export const createSimpleHttpClient = (args: { url: string }) => {
+export const createSimpleHttpClient = <T extends URPC_Schema>(args: { url: string }) => {
     return {
         schema: {
-            async loadFull(): Promise<ReturnType<URPC<any>["loadFull"]>> {
+            async loadFull(): Promise<ReturnType<URPC<T>["loadFull"]>> {
                 return fetch(`${args.url}`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -15,7 +14,7 @@ export const createSimpleHttpClient = (args: { url: string }) => {
                     })
                 }).then(res => res.json())
             },
-            async loadVars(): Promise<ReturnType<URPC<any>["loadVars"]>> {
+            async loadVars(): Promise<ReturnType<URPC<T>["loadVars"]>> {
                 return fetch(`${args.url}`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -26,7 +25,9 @@ export const createSimpleHttpClient = (args: { url: string }) => {
             }
         },
         func: {
-            async call(params: { method: string, input: Record<string, any> }) {
+            async call<R extends keyof T>(params: {
+                method: R, input: T[R] extends URPC_Function<infer Z, any> ? Z : never;
+            }): Promise<T[R] extends URPC_Function<any, infer Z> ? Z : never> {
                 return fetch(`${args.url}`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -64,8 +65,16 @@ export const createSimpleHttpClient = (args: { url: string }) => {
 }
 
 export const createServerClient = <T extends URPC_Schema>({ urpc }: { urpc: URPC<T> }) => {
-    return {
+    const client = {
         urpc,
+        handle({ name, params }: { name: string, params: Record<string, any> }) {
+            const func = get(client, name)
+            console.log(name, params)
+            if (!func) {
+                throw new Error("invalid name")
+            }
+            return func(params)
+        },
         schema: {
             async loadFull() {
                 return urpc.loadFull()
@@ -99,6 +108,8 @@ export const createServerClient = <T extends URPC_Schema>({ urpc }: { urpc: URPC
             }
         }
     }
+
+    return client
 }
 
 
