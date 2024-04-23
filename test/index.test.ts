@@ -1,7 +1,7 @@
 import { URPC } from "../src/urpc";
 import { describe, it, expect } from 'bun:test'
 
-const data = {
+let data = {
     foo: 123,
 };
 
@@ -11,7 +11,7 @@ const urpc = new URPC({
             input: { a: 0, b: 0 },
             func: ({ input }) => input.a + input.b,
         }),
-        foo: URPC.Var({ get: () => data.foo }),
+        data: URPC.Var({ get: () => data, set: (v) => Object.assign(data, v) }),
     },
 });
 
@@ -25,6 +25,6 @@ describe('should', () => {
 
     it('export 2', () => {
         data.foo++
-        expect(urpc.schemas.foo.get()).toBe(124)
+        expect(urpc.schemas.data.get().foo).toBe(124)
     })
 })
