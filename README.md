@@ -7,7 +7,11 @@ bun add @dappworks/urpc
 ```
 
 ```ts
-import URPC from "@dappworks/urpc";
+import {
+  URPC,
+  createServerClient,
+  createSimpleHttpClient,
+} from "@dappworks/urpc";
 
 const urpc = new URPC({
   schemas: {
@@ -19,6 +23,7 @@ const urpc = new URPC({
   },
 });
 
+// server
 const serverClient = createServerClient({ urpc });
 const app = new Hono();
 app.post("/urpc", async (c) => {
