@@ -3,12 +3,14 @@ import { utils } from "./utils"
 
 export interface URPC_Function<T extends Object = {}, R = any> {
   type?: "func"
+  name?: string
   path?: string
   input: T
   func: (args: { input: T }) => R
 }
 export interface URPC_Variable<T extends () => any = () => any, R = any> {
   type?: "var"
+  name?: string
   path?: string
   get: T
   set?: R extends () => infer U ? (value: ReturnType<T>) => U : never;
@@ -39,12 +41,12 @@ export class URPC<T extends URPC_Schema = any> {
   loadFull() {
     return Object.entries(this.falttenSchema).map(([k, v]) => {
       if (v.type == "func") {
-        const { type, input } = v
-        return { type, name: k, input }
+        const { type, input, name } = v
+        return { type, name, input }
       }
       if (v.type == "var") {
-        const { type, get } = v
-        return { type, name: k, value: get() }
+        const { type, get, name } = v
+        return { type, name, value: get() }
       }
       return { type: "unknown", name: k }
     })
@@ -52,8 +54,8 @@ export class URPC<T extends URPC_Schema = any> {
 
   loadVars() {
     return Object.entries(this.falttenSchema).filter(([k, v]) => v.type == "var").map(([k, v]) => {
-      const { get, set } = v as URPC_Variable<any, any>
-      return { name: k, value: get(), get, set }
+      const { get, set, name } = v as URPC_Variable<any, any>
+      return { name, value: get(), get, set }
     })
   }
 }

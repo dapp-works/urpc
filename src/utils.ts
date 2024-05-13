@@ -10,7 +10,9 @@ export const utils = {
       } else {
         const path = prefix ? `${prefix}.${key}` : key
         //@ts-ignore
-        val.path = path
+        Object.assign(val, {
+          name: path,
+        })
         //@ts-ignore
         acc[path] = val
       }
