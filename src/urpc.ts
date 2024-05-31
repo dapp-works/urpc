@@ -25,7 +25,7 @@ export interface URPC_Variable<T extends () => any = () => any, R = any> {
   path?: string
   get: T
   set?: R extends () => infer U ? (value: ReturnType<T>) => U : never;
-  formConfig?: FormConfigType<ReturnType<T>>
+  uiConfig?: FormConfigType<ReturnType<T>>
 }
 
 export type URPC_Entity = URPC_Function<any, any> | URPC_Variable<any, any>
@@ -57,8 +57,8 @@ export class URPC<T extends URPC_Schema = any> {
         return { type, name, input }
       }
       if (v.type == "var") {
-        const { type, get, name, formConfig } = v as URPC_Variable
-        return { type, name, value: get(), formConfig }
+        const { type, get, name, uiConfig } = v as URPC_Variable
+        return { type, name, value: get(), uiConfig }
       }
       return { type: "unknown", name: k }
     })

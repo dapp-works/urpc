@@ -17,7 +17,7 @@ export const urpc = new URPC({
       func: ({ input }) => input.a + input.b,
     }),
     data: URPC.Var({
-      get: () => data, set: (v) => Object.assign(data, v), formConfig: {
+      get: () => data, set: (v) => Object.assign(data, v), uiConfig: {
         foo: {
           "ui:widget": "Input"
         },
