@@ -16,7 +16,7 @@ export const urpc = new URPC({
   schemas: {
     sum: URPC.Func({
       input: { add_fruit: "banana", fruits: "" },
-      func: ({ input }) => input,
+      func: ({ input }) => data.enums.push(input.add_fruit),
       uiConfig: () => ({
         fruits: {
           selectOptions: data.enums.map(i => ({ label: i, value: i }))
