@@ -1,4 +1,15 @@
 import { utils } from "./utils"
+import type { UiSchema } from '@rjsf/utils';
+
+
+export type FormConfigType<T> = {
+  [F in keyof T]?: {
+    title?: string;
+    description?: string;
+    required?: boolean;
+    selectOptions?: { label: string; value: string }[];
+  } & UiSchema;
+};
 
 
 export interface URPC_Function<T extends Object = {}, R = any> {
@@ -14,6 +25,7 @@ export interface URPC_Variable<T extends () => any = () => any, R = any> {
   path?: string
   get: T
   set?: R extends () => infer U ? (value: ReturnType<T>) => U : never;
+  formConfig?: FormConfigType<ReturnType<T>>
 }
 
 export type URPC_Entity = URPC_Function<any, any> | URPC_Variable<any, any>
@@ -45,8 +57,8 @@ export class URPC<T extends URPC_Schema = any> {
         return { type, name, input }
       }
       if (v.type == "var") {
-        const { type, get, name } = v
-        return { type, name, value: get() }
+        const { type, get, name, formConfig } = v as URPC_Variable
+        return { type, name, value: get(), formConfig }
       }
       return { type: "unknown", name: k }
     })
@@ -54,8 +66,8 @@ export class URPC<T extends URPC_Schema = any> {
 
   loadVars() {
     return Object.entries(this.falttenSchema).filter(([k, v]) => v.type == "var").map(([k, v]) => {
-      const { get, set, name } = v as URPC_Variable<any, any>
-      return { name, value: get(), get, set }
+      const { get, name } = v as URPC_Variable<any, any>
+      return { name, value: get() }
     })
   }
 }

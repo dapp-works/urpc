@@ -7,6 +7,7 @@ import { createServerClient } from '../src/client';
 
 let data = {
   foo: 123,
+  bar: "test1234"
 };
 // server
 export const urpc = new URPC({
@@ -15,7 +16,17 @@ export const urpc = new URPC({
       input: { a: 0, b: 0 },
       func: ({ input }) => input.a + input.b,
     }),
-    data: URPC.Var({ get: () => data, set: (v) => Object.assign(data, v) }),
+    data: URPC.Var({
+      get: () => data, set: (v) => Object.assign(data, v), formConfig: {
+        foo: {
+          "ui:widget": "Input"
+        },
+        bar: {
+          "ui:widget": "Textarea",
+
+        }
+      }
+    }),
     object: {
       sum1: URPC.Func({
         input: { a: 0, b: 0 },
