@@ -58,8 +58,8 @@ export class URPC<T extends URPC_Schema = any> {
         return { type, name, input, uiConfig: uiConfig ? uiConfig() : null }
       }
       if (v.type == "var") {
-        const { type, get, name, uiConfig } = v as URPC_Variable
-        return { type, name, value: get(), uiConfig: uiConfig ? uiConfig() : null }
+        const { type, get, set, name, uiConfig } = v as URPC_Variable
+        return { type, name, value: get(), uiConfig: uiConfig ? uiConfig() : null, set: !!set }
       }
       return { type: "unknown", name: k }
     })

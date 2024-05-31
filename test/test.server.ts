@@ -31,7 +31,7 @@ export const urpc = new URPC({
         input: { a: 0, b: 0 },
         func: ({ input }) => input.a + input.b,
       }),
-      data1: URPC.Var({ get: () => data, set: (v) => Object.assign(data, v) }),
+      data1: URPC.Var({ get: () => data }),
     },
   },
 });
