@@ -7,25 +7,24 @@ import { createServerClient } from '../src/client';
 
 let data = {
   foo: 123,
-  bar: "test1234"
+  bar: "test1234",
+  enums: ["apple", "orange"]
 };
+
 // server
 export const urpc = new URPC({
   schemas: {
     sum: URPC.Func({
-      input: { a: 0, b: 0 },
-      func: ({ input }) => input.a + input.b,
+      input: { add_fruit: "banana", fruits: "" },
+      func: ({ input }) => input,
+      uiConfig: () => ({
+        fruits: {
+          selectOptions: data.enums.map(i => ({ label: i, value: i }))
+        }
+      })
     }),
     data: URPC.Var({
-      get: () => data, set: (v) => Object.assign(data, v), uiConfig: {
-        foo: {
-          "ui:widget": "Input"
-        },
-        bar: {
-          "ui:widget": "Textarea",
-
-        }
-      }
+      get: () => data, set: (v) => Object.assign(data, v)
     }),
     object: {
       sum1: URPC.Func({
@@ -33,15 +32,7 @@ export const urpc = new URPC({
         func: ({ input }) => input.a + input.b,
       }),
       data1: URPC.Var({ get: () => data, set: (v) => Object.assign(data, v) }),
-      test: {
-        sum2: URPC.Func({
-          input: { a: 0, b: 0 },
-          func: ({ input }) => input.a + input.b,
-        }),
-        data3: URPC.Var({ get: () => data.foo, set: (v) => data.foo = v }),
-      }
     },
-
   },
 });
 

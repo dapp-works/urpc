@@ -18,6 +18,7 @@ export interface URPC_Function<T extends Object = {}, R = any> {
   path?: string
   input: T
   func: (args: { input: T }) => R
+  uiConfig?: () => FormConfigType<T>
 }
 export interface URPC_Variable<T extends () => any = () => any, R = any> {
   type?: "var"
@@ -25,7 +26,7 @@ export interface URPC_Variable<T extends () => any = () => any, R = any> {
   path?: string
   get: T
   set?: R extends () => infer U ? (value: ReturnType<T>) => U : never;
-  uiConfig?: FormConfigType<ReturnType<T>>
+  uiConfig?: () => FormConfigType<ReturnType<T>>
 }
 
 export type URPC_Entity = URPC_Function<any, any> | URPC_Variable<any, any>
@@ -53,12 +54,12 @@ export class URPC<T extends URPC_Schema = any> {
   loadFull() {
     return Object.entries(this.falttenSchema).map(([k, v]) => {
       if (v.type == "func") {
-        const { type, input, name } = v
-        return { type, name, input }
+        const { type, input, name, uiConfig } = v
+        return { type, name, input, uiConfig: uiConfig ? uiConfig() : null }
       }
       if (v.type == "var") {
         const { type, get, name, uiConfig } = v as URPC_Variable
-        return { type, name, value: get(), uiConfig }
+        return { type, name, value: get(), uiConfig: uiConfig ? uiConfig() : null }
       }
       return { type: "unknown", name: k }
     })
