@@ -5,10 +5,11 @@ export const utils = {
   isNamespace: o => o && !o.type,
   flattenSchema(obj: any, prefix?) {
     return Object.entries(obj).reduce((acc, [key, val]) => {
+      const path = prefix ? `${prefix}.${key}` : key
+
       if (utils.isNamespace(val)) {
-        acc = { ...acc, ...utils.flattenSchema(val, key) }
+        acc = { ...acc, ...utils.flattenSchema(val, path) }
       } else {
-        const path = prefix ? `${prefix}.${key}` : key
         //@ts-ignore
         Object.assign(val, {
           name: path,

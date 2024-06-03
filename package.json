@@ -1,6 +1,6 @@
 {
   "name": "@dappworks/urpc",
-  "version": "0.0.10",
+  "version": "0.0.13",
   "module": "index.ts",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,6 +17,7 @@
     "@types/bun": "latest",
     "@types/json-schema": "^7.0.15",
     "@types/lodash.get": "^4.4.9",
+    "@types/uuid": "^9.0.8",
     "bun-plugin-dts": "^0.2.3",
     "hono": "^4.2.6"
   },
@@ -35,8 +36,11 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
+    "fast-json-patch": "^3.1.1",
     "json-schema": "^0.4.0",
     "lodash.get": "^4.4.2",
-    "lodash.set": "^4.3.2"
+    "lodash.keyby": "^4.6.0",
+    "lodash.set": "^4.3.2",
+    "uuid": "^9.0.1"
   }
 }

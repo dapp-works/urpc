@@ -3,41 +3,56 @@ import { Hono } from 'hono'
 import { cors } from "hono/cors"
 import { URPC } from "../src/urpc";
 import { createServerClient } from '../src/client';
+import { applyPatch } from 'fast-json-patch';
 
 
 let data = {
   foo: 123,
   bar: "test1234",
-  enums: ["apple", "orange"]
+  enums: ["apple", "orange"],
+  collections: [{ name: "Data1" }, { name: "Data2" }]
 };
+
+const func1 = URPC.Func({
+  input: { add_fruit: "banana", fruits: [] },
+  func: ({ input }) => data.enums.push(input.add_fruit),
+  uiConfig: () => ({
+    fruits: {
+      selectOptions: data.enums.map(i => ({ label: i, value: i }))
+    }
+  })
+})
+
 
 // server
 export const urpc = new URPC({
   schemas: {
-    sum: URPC.Func({
-      input: { add_fruit: "banana", fruits: "" },
-      func: ({ input }) => data.enums.push(input.add_fruit),
-      uiConfig: () => ({
-        fruits: {
-          selectOptions: data.enums.map(i => ({ label: i, value: i }))
-        }
-      })
-    }),
+    func1,
     data: URPC.Var({
-      get: () => data, set: (v) => Object.assign(data, v)
+      get: () => data,
+      patch: (ops) => {
+        ops.forEach(i => {
+          if (i.op == "replace") {
+            // TODO
+          }
+        })
+        return applyPatch(data, ops)
+      },
     }),
     object: {
-      sum1: URPC.Func({
-        input: { a: 0, b: 0 },
-        func: ({ input }) => input.a + input.b,
-      }),
-      data1: URPC.Var({ get: () => data }),
+      object1: {
+        sum1: URPC.Func({
+          input: { a: 0, b: 0 },
+          func: ({ input }) => input.a + input.b,
+        }),
+        data1: URPC.Var({ get: () => data }),
+      }
     },
   },
 });
 
 
-const serverClient = createServerClient({ urpc })
+export const serverClient = createServerClient({ urpc })
 
 const app = new Hono()
 app.use(cors())

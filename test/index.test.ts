@@ -35,7 +35,6 @@ const urpc = new URPC({
 
 describe('should', () => {
   it('export 1', () => {
-    console.log(urpc.schemas)
     expect(urpc.schemas.sum.func({ input: { a: 1, b: 2 } })).toBe(3)
   })
 
@@ -43,4 +42,5 @@ describe('should', () => {
     data.foo++
     expect(urpc.schemas.data.get().foo).toBe(124)
   })
+
 })

@@ -1,18 +1,24 @@
 import { utils } from "./utils"
 import type { UiSchema } from '@rjsf/utils';
+import { v4 as uuid } from "uuid"
+import keyby from "lodash.keyby"
+import { type Operation, type PatchResult } from "fast-json-patch"
 
 
 export type FormConfigType<T> = {
-  [F in keyof T]?: {
-    title?: string;
-    description?: string;
-    required?: boolean;
-    selectOptions?: { label: string; value: string }[];
-  } & UiSchema;
+  [F in keyof T]?: FormConfigItem
 };
+
+export type FormConfigItem = {
+  title?: string;
+  description?: string;
+  required?: boolean;
+  selectOptions?: { label: string; value: string }[];
+} & UiSchema
 
 
 export interface URPC_Function<T extends Object = {}, R = any> {
+  uid: string
   type?: "func"
   name?: string
   path?: string
@@ -20,11 +26,13 @@ export interface URPC_Function<T extends Object = {}, R = any> {
   func: (args: { input: T }) => R
   uiConfig?: () => FormConfigType<T>
 }
-export interface URPC_Variable<T extends () => any = () => any, R = any> {
+export interface URPC_Variable<T extends () => any = () => any, R = any, V = any> {
+  uid: string
   type?: "var"
   name?: string
   path?: string
   get: T
+  patch?: (value: Operation[]) => PatchResult<any>
   set?: R extends () => infer U ? (value: ReturnType<T>) => U : never;
   uiConfig?: () => FormConfigType<ReturnType<T>>
 }
@@ -38,28 +46,32 @@ export type URPC_Schema = {
 export class URPC<T extends URPC_Schema = any> {
   schemas: T
   falttenSchema: URPC_Schema
-  static Var<T extends () => any, R = any>(args: URPC_Variable<T, R>): URPC_Variable<T, R> {
-    return { ...args, type: "var" }
+  uidSchemas: URPC_Schema
+  static Var<T extends () => any, R = any>(args: Partial<URPC_Variable<T, R>>): URPC_Variable<T, R> {
+    return { ...args, type: "var", uid: uuid() } as URPC_Variable<T, R>
   }
-  static Func<T extends Object = {}, R = any>(args: URPC_Function<T, R>): URPC_Function<T, R> {
-    return { ...args, type: "func" }
+  static Func<T extends Object = {}, R = any>(args: Partial<URPC_Function<T, R>>): URPC_Function<T, R> {
+    return { ...args, type: "func", uid: uuid() } as URPC_Function<T, R>
   }
+
 
   constructor(args: Partial<URPC<T>> = {}) {
     Object.assign(this, args)
     this.falttenSchema = utils.flattenSchema(this.schemas)
+    this.uidSchemas = keyby(this.schemas, "uid")
+
   }
 
 
   loadFull() {
     return Object.entries(this.falttenSchema).map(([k, v]) => {
       if (v.type == "func") {
-        const { type, input, name, uiConfig } = v
-        return { type, name, input, uiConfig: uiConfig ? uiConfig() : null }
+        const { uid, type, input, name, uiConfig } = v
+        return { uid, type, name, input, uiConfig: uiConfig ? uiConfig() : null }
       }
       if (v.type == "var") {
-        const { type, get, set, name, uiConfig } = v as URPC_Variable
-        return { type, name, value: get(), uiConfig: uiConfig ? uiConfig() : null, set: !!set }
+        const { uid, type, get, set, name, uiConfig } = v as URPC_Variable
+        return { uid, type, name, value: get(), uiConfig: uiConfig ? uiConfig() : null, set: !!set }
       }
       return { type: "unknown", name: k }
     })

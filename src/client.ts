@@ -1,3 +1,4 @@
+import type { Operation } from "fast-json-patch"
 import type { URPC_Function, URPC_Variable, URPC, URPC_Schema } from "./index"
 import get from "lodash.get"
 
@@ -26,7 +27,7 @@ export const createSimpleHttpClient = <T extends URPC_Schema>(args: { url: strin
     },
     func: {
       async call<R extends keyof T>(params: {
-        method: R, input: T[R] extends URPC_Function<infer Z, any> ? Z : never;
+        method: R, input: Partial<T[R] extends URPC_Function<infer Z, any> ? Z : never>
       }): Promise<T[R] extends URPC_Function<any, infer Z> ? Z : never> {
         return fetch(`${args.url}`, {
           method: "POST",
@@ -50,7 +51,7 @@ export const createSimpleHttpClient = <T extends URPC_Schema>(args: { url: strin
           })
         }).then(res => res.json())
       },
-      async patch(params: { name: string, value: any }) {
+      async patch(params: { name: string, ops: Operation[] }) {
         return fetch(`${args.url}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -85,7 +86,7 @@ export const createServerClient = <T extends URPC_Schema>({ urpc }: { urpc: URPC
     },
     func: {
       async call(params: { method: string, input: Record<string, any> }) {
-        const ufunc = urpc.falttenSchema[params.method] as URPC_Function
+        const ufunc = (urpc.uidSchemas[params.method] || urpc.falttenSchema[params.method]) as URPC_Function
         if (!ufunc) {
           throw new Error("invalid func name")
         }
@@ -94,7 +95,7 @@ export const createServerClient = <T extends URPC_Schema>({ urpc }: { urpc: URPC
     },
     var: {
       async set(params: { name: string, value: any }) {
-        const uvar = urpc.falttenSchema[params.name] as URPC_Variable
+        const uvar = (urpc.uidSchemas[params.name] || urpc.falttenSchema[params.name]) as URPC_Variable
         if (!uvar) {
           throw new Error("invalid var name")
         }
@@ -103,8 +104,16 @@ export const createServerClient = <T extends URPC_Schema>({ urpc }: { urpc: URPC
         }
         return uvar.set(params.value)
       },
-      async patch(params: { name: string, value: any }) {
-        throw new Error("TBD")
+      async patch(params: { name: string, ops: Operation[] }) {
+        const uvar = (urpc.uidSchemas[params.name] || urpc.falttenSchema[params.name]) as URPC_Variable
+        if (!uvar) {
+          throw new Error("invalid var name")
+        }
+        if (!uvar.patch) {
+          throw new Error("variable can't be set")
+        }
+        const res = uvar.patch(params.ops)
+        return res.newDocument
       }
     }
   }
