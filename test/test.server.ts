@@ -10,7 +10,6 @@ let data = {
   foo: 123,
   bar: "test1234",
   enums: ["apple", "orange"],
-  collections: [{ name: "Data1" }, { name: "Data2" }]
 };
 
 const func1 = URPC.Func({
@@ -23,29 +22,23 @@ const func1 = URPC.Func({
   })
 })
 
+let collections = [{ name: "Data1" }, { name: "Data2" }]
+
 
 // server
 export const urpc = new URPC({
   schemas: {
-    func1,
-    data: URPC.Var({
-      get: () => data,
-      patch: (ops) => {
-        ops.forEach(i => {
-          if (i.op == "replace") {
-            // TODO
-          }
-        })
-        return applyPatch(data, ops)
-      },
-    }),
     object: {
+      func1,
       object1: {
         sum1: URPC.Func({
           input: { a: 0, b: 0 },
           func: ({ input }) => input.a + input.b,
         }),
         data1: URPC.Var({ get: () => data }),
+        collections: URPC.Var({
+          get: () => collections,
+        }),
       }
     },
   },

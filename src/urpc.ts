@@ -2,7 +2,7 @@ import { utils } from "./utils"
 import type { UiSchema } from '@rjsf/utils';
 import { v4 as uuid } from "uuid"
 import keyby from "lodash.keyby"
-import { type Operation, type PatchResult } from "fast-json-patch"
+import { applyPatch, type Operation, type PatchResult } from "fast-json-patch"
 
 
 export type FormConfigType<T> = {
@@ -33,7 +33,10 @@ export interface URPC_Variable<T extends () => any = () => any, R = any, V = any
   name?: string
   path?: string
   get: T
-  patch?: (value: Operation[]) => PatchResult<any>
+  patch?: ((value: Operation[]) => PatchResult<any>)
+  allow?: {
+    patch?: Boolean
+  }
   set?: R extends () => infer U ? (value: ReturnType<T>) => U : never;
   uiConfig?: () => FormConfigType<Item<ReturnType<T>>>
 }
@@ -49,6 +52,12 @@ export class URPC<T extends URPC_Schema = any> {
   falttenSchema: URPC_Schema
   uidSchemas: URPC_Schema
   static Var<T extends () => any, R = any>(args: Partial<URPC_Variable<T, R>>): URPC_Variable<T, R> {
+    if (!args.patch) {
+      args.patch = (ops) => {
+        //@ts-ignore
+        return applyPatch(args.get(), ops)
+      }
+    }
     return { ...args, type: "var", uid: uuid() } as URPC_Variable<T, R>
   }
   static Func<T extends Object = {}, R = any>(args: Partial<URPC_Function<T, R>>): URPC_Function<T, R> {

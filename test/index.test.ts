@@ -12,29 +12,6 @@ const urpc = new URPC({
       func: ({ input }) => input.a + input.b,
     }),
     data: URPC.Var({ get: () => data, set: (v) => Object.assign(data, v) }),
-    object: {
-      sum1: URPC.Func({
-        input: { a: 0, b: 0 },
-        func: ({ input }) => input.a + input.b,
-      }),
-      data1: URPC.Var({
-        get: () => data, set: (v) => Object.assign(data, v), uiConfig: () => {
-          return {
-            foo: {
-
-            }
-          }
-        }
-      }),
-      test: {
-        sum2: URPC.Func({
-          input: { a: 0, b: 0 },
-          func: ({ input }) => input.a + input.b,
-        }),
-        data3: URPC.Var({ get: () => 123, set: (v) => Object.assign(data, v) }),
-      }
-    },
-
   },
 });
 
