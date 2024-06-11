@@ -6,7 +6,7 @@ import { type Operation, type PatchResult } from "fast-json-patch"
 
 
 export type FormConfigType<T> = {
-  [F in keyof T]?: FormConfigItem
+  [F in keyof T]?: Item<FormConfigItem>
 };
 
 export type FormConfigItem = {
@@ -15,6 +15,7 @@ export type FormConfigItem = {
   required?: boolean;
   selectOptions?: { label: string; value: string }[];
 } & UiSchema
+export type Item<T> = T extends (infer U)[] ? U : T;
 
 
 export interface URPC_Function<T extends Object = {}, R = any> {
@@ -34,7 +35,7 @@ export interface URPC_Variable<T extends () => any = () => any, R = any, V = any
   get: T
   patch?: (value: Operation[]) => PatchResult<any>
   set?: R extends () => infer U ? (value: ReturnType<T>) => U : never;
-  uiConfig?: () => FormConfigType<ReturnType<T>>
+  uiConfig?: () => FormConfigType<Item<ReturnType<T>>>
 }
 
 export type URPC_Entity = URPC_Function<any, any> | URPC_Variable<any, any>
