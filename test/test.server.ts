@@ -22,7 +22,17 @@ const func1 = URPC.Func({
   })
 })
 
-let collections = [{ name: "Data1" }, { name: "Data2" }]
+const collections = [{ name: "Data1" }, { name: "Data2" }]
+const collectionProxy = new Proxy(collections, {
+  set(t, p: string, v) {
+    console.log(`set path ${p} value ${JSON.stringify(v, null, 2)}`)
+    return Reflect.set(t, p, v)
+  },
+  deleteProperty(t, p: string) {
+    console.log(`delete path ${p}`)
+    return Reflect.deleteProperty(t, p)
+  }
+})
 
 
 // server
@@ -37,7 +47,12 @@ export const urpc = new URPC({
         }),
         data1: URPC.Var({ get: () => data }),
         collections: URPC.Var({
-          get: () => collections,
+          get: () => collectionProxy,
+          uiConfig: () => {
+            return {
+              name: {}
+            }
+          }
         }),
       }
     },
