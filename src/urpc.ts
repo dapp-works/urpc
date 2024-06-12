@@ -3,6 +3,7 @@ import type { UiSchema } from '@rjsf/utils';
 import { v4 as uuid } from "uuid"
 import keyby from "lodash.keyby"
 import { applyPatch, type Operation, type PatchResult } from "fast-json-patch"
+import { isBoolean } from "lodash";
 
 
 export type FormConfigType<T> = {
@@ -54,10 +55,12 @@ export interface URPC_Variable<
   _schema?: ReturnType<Required<URPC_Variable<T>>["schema"]>
   actions?: ActionType<Item<T>>
   patch?: {
-    allowCreate?: Boolean
-    allowDelete?: Boolean
-    allowUpdate?: Boolean,
-    autoPatch?: Boolean
+    allowCreate?: boolean
+    allowDelete?: boolean
+    allowUpdate?: boolean,
+    autoPatch?: boolean | {
+      target: () => any
+    }
     onCreate?: (value: Item<T>) => any
     onUpdate?: (key, value) => any
     onDelete?: (key: any) => any
@@ -87,7 +90,9 @@ export class URPC<T extends URPC_Schema = any> {
       allowCreate: true,
       allowDelete: true,
       allowUpdate: true,
-      autoPatch: true,
+      autoPatch: {
+        target: args.get
+      },
       onPatch: async (ops) => {
         ops.forEach(async op => {
           if (op.op == 'add' && op.path == '/-') {
@@ -102,8 +107,8 @@ export class URPC<T extends URPC_Schema = any> {
         })
         const value = await args.get!()
 
-        if (args.patch?.autoPatch) {
-          return applyPatch(value, ops).newDocument
+        if (!isBoolean(args.patch?.autoPatch) && !!args.patch?.autoPatch?.target) {
+          return applyPatch(args.patch.autoPatch.target(), ops).newDocument
         }
 
         //@ts-ignore
