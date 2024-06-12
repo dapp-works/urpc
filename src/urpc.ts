@@ -7,7 +7,11 @@ import { applyPatch, type Operation, type PatchResult } from "fast-json-patch"
 
 export type FormConfigType<T> = {
   [F in keyof T]?: Item<FormConfigItem>
-};
+}
+
+export type ActionType<T> = {
+  [key: string]: (val: T) => any
+}
 
 export type FormConfigItem = {
   title?: string;
@@ -27,21 +31,42 @@ export interface URPC_Function<T extends Object = {}, R = any> {
   func: (args: { input: T }) => R
   uiConfig?: () => FormConfigType<T>
 }
-export interface URPC_Variable<T extends () => any = () => any, R = any, V = any> {
+
+type ExtractReturnType<T> = T extends (...args: any[]) => infer R ? R : never;
+type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
+export interface URPC_Variable<
+  G extends () => any = () => any,
+  T extends UnwrapPromise<ReturnType<G>> = UnwrapPromise<ReturnType<G>>
+> {
   uid: string
   type?: "var"
   name?: string
   path?: string
-  get: T
-  patch?: ((value: Operation[]) => PatchResult<any>)
-  allow?: {
-    patch?: Boolean
+  get: G
+  schema?: (val: T) => {
+    [F in keyof Item<T> | string]?: {
+
+      type?: string
+      uiConfig?: FormConfigItem
+      call?: (val: Item<T>) => any
+    }
   }
-  set?: R extends () => infer U ? (value: ReturnType<T>) => U : never;
-  uiConfig?: () => FormConfigType<Item<ReturnType<T>>>
+  _schema?: ReturnType<Required<URPC_Variable<T>>["schema"]>
+  actions?: ActionType<Item<T>>
+  patch?: {
+    allowCreate?: Boolean
+    allowDelete?: Boolean
+    allowUpdate?: Boolean,
+    autoPatch?: Boolean
+    onCreate?: (value: Item<T>) => any
+    onUpdate?: (key, value) => any
+    onDelete?: (key: any) => any
+    onPatch?: (value: Operation[]) => Promise<PatchResult<any>>
+  }
+  set?: (val: T) => any
 }
 
-export type URPC_Entity = URPC_Function<any, any> | URPC_Variable<any, any>
+export type URPC_Entity = URPC_Function<any, any> | URPC_Variable<any>
 
 export type URPC_Schema = {
   [key: string]: URPC_Entity | URPC_Schema
@@ -51,14 +76,41 @@ export class URPC<T extends URPC_Schema = any> {
   schemas: T
   falttenSchema: URPC_Schema
   uidSchemas: URPC_Schema
-  static Var<T extends () => any, R = any>(args: Partial<URPC_Variable<T, R>>): URPC_Variable<T, R> {
-    if (!args.patch) {
-      args.patch = (ops) => {
+  // static Raw<T extends () => any>(t: T, func: (args: ReturnType<T>) => Partial<URPC_Variable<T>>) {
+  //   const res = func(t())
+  //   return URPC.Var({ get: t, ...res }) as URPC_Variable<T>
+  // }
+
+
+  static Var<G extends () => any>(args: Partial<URPC_Variable<G>>): URPC_Variable<G> {
+    args.patch = Object.assign({}, {
+      allowCreate: true,
+      allowDelete: true,
+      allowUpdate: true,
+      autoPatch: true,
+      onPatch: async (ops) => {
+        ops.forEach(async op => {
+          if (op.op == 'add' && op.path == '/-') {
+            args.patch?.onCreate && await args.patch.onCreate(op.value)
+          }
+          if (op.op == 'replace') {
+            args.patch?.onUpdate && await args.patch.onUpdate(op.path.replace("/", ""), op.value)
+          }
+          if (op.op == 'remove') {
+            args.patch?.onDelete && await args.patch.onDelete(op.path.replace("/", ""))
+          }
+        })
+        const value = await args.get!()
+
+        if (args.patch?.autoPatch) {
+          return applyPatch(value, ops).newDocument
+        }
+
         //@ts-ignore
-        return applyPatch(args.get(), ops)
+        return value
       }
-    }
-    return { ...args, type: "var", uid: uuid() } as URPC_Variable<T, R>
+    } as typeof args.patch, args.patch || {})
+    return { ...args, type: "var", uid: uuid() } as URPC_Variable<G>
   }
   static Func<T extends Object = {}, R = any>(args: Partial<URPC_Function<T, R>>): URPC_Function<T, R> {
     return { ...args, type: "func", uid: uuid() } as URPC_Function<T, R>
@@ -68,30 +120,50 @@ export class URPC<T extends URPC_Schema = any> {
   constructor(args: Partial<URPC<T>> = {}) {
     Object.assign(this, args)
     this.falttenSchema = utils.flattenSchema(this.schemas)
-    this.uidSchemas = keyby(this.schemas, "uid")
-
+    this.uidSchemas = keyby(Object.values(this.falttenSchema), "uid")
   }
 
 
-  loadFull() {
-    return Object.entries(this.falttenSchema).map(([k, v]) => {
+  async loadFull() {
+    return Promise.all(Object.entries(this.falttenSchema).map(async ([k, v]) => {
       if (v.type == "func") {
         const { uid, type, input, name, uiConfig } = v
         return { uid, type, name, input, uiConfig: uiConfig ? uiConfig() : null }
       }
       if (v.type == "var") {
-        const { uid, type, get, set, name, uiConfig } = v as URPC_Variable
-        return { uid, type, name, value: get(), uiConfig: uiConfig ? uiConfig() : null, set: !!set }
+        const { uid, type, get, set, name, patch } = v as URPC_Variable
+        const value = await get()
+
+        const _schema = v.schema ? v.schema(value) : null
+        let actions: string[] = []
+        let uiConfig: FormConfigType<Item<ReturnType<any>>> = {}
+        if (_schema) {
+          v._schema = _schema
+          Object.entries(_schema).forEach(([k, s]) => {
+            if (!s) return
+            if (s.type == "action") {
+              actions.push(k)
+            }
+            //@ts-ignore
+            if (s.uiConfig) {
+              //@ts-ignore
+              uiConfig[k] = s.uiConfig
+            }
+          })
+        }
+
+        return { uid, type, name, value, actions, uiConfig, set: !!set, patch, }
       }
       return { type: "unknown", name: k }
-    })
+    }))
   }
 
-  loadVars() {
-    return Object.entries(this.falttenSchema).filter(([k, v]) => v.type == "var").map(([k, v]) => {
-      const { get, name } = v as URPC_Variable<any, any>
-      return { name, value: get() }
-    })
+  async loadVars() {
+    return Promise.all(Object.entries(this.falttenSchema).filter(([k, v]) => v.type == "var").map(async ([k, v]) => {
+      const { get, name } = v as URPC_Variable
+      const value = await get()
+      return { name, value }
+    }))
   }
 }
 

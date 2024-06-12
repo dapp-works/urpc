@@ -41,7 +41,7 @@ export const createSimpleHttpClient = <T extends URPC_Schema>(args: { url: strin
 
     },
     var: {
-      async set<R extends keyof T, V extends T[R] extends URPC_Variable<infer Z, any> ? Z : never>(params: { name: R, value: ReturnType<V> }) {
+      async set<R extends keyof T, V extends T[R] extends URPC_Variable<infer Z> ? Z : never>(params: { name: R, value: ReturnType<V> }) {
         return fetch(`${args.url}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -57,6 +57,16 @@ export const createSimpleHttpClient = <T extends URPC_Schema>(args: { url: strin
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: "var.patch",
+            params
+          })
+        }).then(res => res.json())
+      },
+      async action(params: { name: string, action: string, value: any }) {
+        return fetch(`${args.url}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: "var.action",
             params
           })
         }).then(res => res.json())
@@ -112,9 +122,22 @@ export const createServerClient = <T extends URPC_Schema>({ urpc }: { urpc: URPC
         if (!uvar.patch) {
           throw new Error("variable can't be set")
         }
-        const res = uvar.patch(params.ops)
-        return res.newDocument
-      }
+        const res = await uvar.patch?.onPatch!(params.ops)
+        return res
+      },
+      async action(params: { name: string, action: string, value: any }) {
+        const uvar = (urpc.uidSchemas[params.name] || urpc.falttenSchema[params.name]) as URPC_Variable
+        if (!uvar) {
+          throw new Error("invalid var name")
+        }
+        const action = uvar._schema![params.action]
+        if (!action) {
+          throw new Error("invalid action name")
+        }
+        if (action.type !== "action") throw new Error("invalid action")
+        //@ts-ignore
+        return action.call(params.value)
+      },
     }
   }
 

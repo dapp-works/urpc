@@ -22,24 +22,6 @@ const func1 = URPC.Func({
 })
 
 let collections = [{ name: "Data1" }, { name: "Data2" }]
-const collectionProxy = new Proxy(collections.map(i => ({ ...i, remove() { collections = collections.filter(t => t.name !== i.name) } })), {
-  set(t, p: string, v) {
-    if (p == 'length') return Reflect.set(t, p, v)
-    console.log(`set path ${p} value ${JSON.stringify(v, null, 2)}`)
-    //TODO upsert
-    if (!t[p]) {
-    } else {
-    }
-    return Reflect.set(t, p, v)
-  },
-  deleteProperty(t, p: string) {
-    const item = t[p]
-    console.log(`delete item ${JSON.stringify(item, null, 2)}`)
-    // TODO update db
-    return Reflect.deleteProperty(t, p)
-  }
-})
-
 
 // server
 export const urpc = new URPC({
@@ -50,18 +32,32 @@ export const urpc = new URPC({
         input: { a: 0, b: 0 },
         func: ({ input }) => input.a + input.b,
       }),
-      data1: URPC.Var({ get: () => data }),
+      data1: URPC.Var({ get: async () => data }),
       collections: URPC.Var({
-        get: () => collectionProxy,
-        uiConfig: () => {
+        get: async () => collections,
+        patch: {
+          onCreate(val) {
+
+          }
+        },
+        schema: (val) => {
           return {
-            name: {}
+            name: {
+              uiConfig: {}
+            },
+            log: {
+              type: "action",
+              call: (i) => {
+                console.log(i)
+              }
+            }
           }
         }
-      }),
+      })
     },
-  },
-});
+  }
+
+})
 
 
 export const serverClient = createServerClient({ urpc })
