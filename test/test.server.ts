@@ -43,7 +43,6 @@ export const urpc = new URPC({
         schema: (val) => {
           return {
             name: {
-              uiConfig: {}
             },
             log: {
               type: "action",

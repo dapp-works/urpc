@@ -35,6 +35,12 @@ export interface URPC_Function<T extends Object = {}, R = any> {
 
 type ExtractReturnType<T> = T extends (...args: any[]) => infer R ? R : never;
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
+
+type SchemaItem<T> = {
+  type?: string
+  uiConfig?: FormConfigItem
+  call?: (val: Item<T>) => any
+}
 export interface URPC_Variable<
   G extends () => any = () => any,
   T extends UnwrapPromise<ReturnType<G>> = UnwrapPromise<ReturnType<G>>
@@ -45,15 +51,12 @@ export interface URPC_Variable<
   path?: string
   get: G
   schema?: (val: T) => {
-    [F in keyof Item<T> | string]?: {
-
-      type?: string
-      uiConfig?: FormConfigItem
-      call?: (val: Item<T>) => any
-    }
+    [F in keyof Item<T>]?: SchemaItem<T>
+  } & {
+    [key: string]: SchemaItem<T>
   }
   _schema?: ReturnType<Required<URPC_Variable<T>>["schema"]>
-  actions?: ActionType<Item<T>>
+  // actions?: ActionType<Item<T>>
   patch?: {
     allowCreate?: boolean
     allowDelete?: boolean
