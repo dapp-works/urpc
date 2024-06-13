@@ -36,20 +36,26 @@ export const urpc = new URPC({
       collections: URPC.Var({
         get: async () => collections,
         patch: {
-          onCreate(val) {
-
-          }
         },
         schema: (val) => {
           return {
             name: {
-            },
-            log: {
-              type: "action",
-              call: (i) => {
-                console.log(i)
+              uiConfig: {
+                "description": "test"
               }
-            }
+            },
+            log: URPC.Action({
+              input: { i: 0 },
+              func: ({ input, val }) => {
+                console.log(val)
+              }
+            }),
+            create: URPC.Func({
+              input: { name: "" },
+              func: ({ input, val }) => {
+                collections.push({ name: input.name })
+              }
+            }),
           }
         }
       })

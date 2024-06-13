@@ -23,56 +23,66 @@ export type FormConfigItem = {
 export type Item<T> = T extends (infer U)[] ? U : T;
 
 
-export interface URPC_Function<T extends Object = {}, R = any> {
+export interface URPC_Function<T extends Object = {}, R extends any = any, V = any> {
   uid: string
   type?: "func"
   name?: string
   path?: string
   input: T
-  func: (args: { input: T }) => R
+  func: (args: { input: T, val?: Item<R> }) => V
   uiConfig?: () => FormConfigType<T>
 }
+
 
 type ExtractReturnType<T> = T extends (...args: any[]) => infer R ? R : never;
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 
-type SchemaItem<T> = {
+type SchemaItem<T extends Object = {}, R extends any = any> = {
   type?: string
   uiConfig?: FormConfigItem
-  call?: (val: Item<T>) => any
+} | URPC_Action<T, R> | URPC_Function<T, R, any>
+
+export type URPC_Action<T extends Object = {}, R extends any = any> = {
+  type?: "action"
+  input?: T
+  func?: (args: { val: Item<R>, input: T }) => any
+  uiConfig?: FormConfigItem
 }
+
 export interface URPC_Variable<
   G extends () => any = () => any,
-  T extends UnwrapPromise<ReturnType<G>> = UnwrapPromise<ReturnType<G>>
+  R extends UnwrapPromise<ReturnType<G>> = UnwrapPromise<ReturnType<G>>
 > {
   uid: string
   type?: "var"
   name?: string
   path?: string
   get: G
-  schema?: (val: T) => {
-    [F in keyof Item<T>]?: SchemaItem<T>
+  value: ReturnType<G>
+  schema?: (val: R) => {
+    [F in keyof Item<R>]?: SchemaItem<any, R>
   } & {
-    [key: string]: SchemaItem<T>
+    [key: string]: SchemaItem<any, R>
   }
-  _schema?: ReturnType<Required<URPC_Variable<T>>["schema"]>
+  _schema?: ReturnType<Required<URPC_Variable<R>>["schema"]>
   // actions?: ActionType<Item<T>>
   patch?: {
+    enable?: boolean
     allowCreate?: boolean
     allowDelete?: boolean
     allowUpdate?: boolean,
     autoPatch?: boolean | {
       target: () => any
     }
-    onCreate?: (value: Item<T>) => any
+    onCreate?: (value: Item<R>) => any
     onUpdate?: (key, value) => any
     onDelete?: (key: any) => any
     onPatch?: (value: Operation[]) => Promise<PatchResult<any>>
   }
-  set?: (val: T) => any
+  set?: (val: R) => any
 }
 
-export type URPC_Entity = URPC_Function<any, any> | URPC_Variable<any>
+export type URPC_Entity = URPC_Function<any, any, any> | URPC_Variable<any>
 
 export type URPC_Schema = {
   [key: string]: URPC_Entity | URPC_Schema
@@ -82,13 +92,18 @@ export class URPC<T extends URPC_Schema = any> {
   schemas: T
   falttenSchema: URPC_Schema
   uidSchemas: URPC_Schema
-  // static Raw<T extends () => any>(t: T, func: (args: ReturnType<T>) => Partial<URPC_Variable<T>>) {
-  //   const res = func(t())
-  //   return URPC.Var({ get: t, ...res }) as URPC_Variable<T>
-  // }
+
 
 
   static Var<G extends () => any>(args: Partial<URPC_Variable<G>>): URPC_Variable<G> {
+    if (!args.get) throw new Error("invalid Var params")
+    const get = args.get
+    //@ts-ignore
+    args.get = async () => {
+      const value = await get!()
+      args.value = value
+      return value
+    }
     args.patch = Object.assign({}, {
       allowCreate: true,
       allowDelete: true,
@@ -120,9 +135,14 @@ export class URPC<T extends URPC_Schema = any> {
     } as typeof args.patch, args.patch || {})
     return { ...args, type: "var", uid: uuid() } as URPC_Variable<G>
   }
-  static Func<T extends Object = {}, R = any>(args: Partial<URPC_Function<T, R>>): URPC_Function<T, R> {
-    return { ...args, type: "func", uid: uuid() } as URPC_Function<T, R>
+  static Func<T extends Object = {}, R = any, V = any>(args: Partial<URPC_Function<T, R, V>>): URPC_Function<T, R, V> {
+    return { ...args, type: "func", uid: uuid() } as URPC_Function<T, R, V>
   }
+  static Action<T extends Object = {}, R = any>(args: Partial<URPC_Action<T, R>>): URPC_Action<T, R> {
+    return { ...args, type: "action", uid: uuid() } as URPC_Action<T, R>
+  }
+
+
 
 
   constructor(args: Partial<URPC<T>> = {}) {
@@ -160,7 +180,7 @@ export class URPC<T extends URPC_Schema = any> {
           })
         }
 
-        return { uid, type, name, value, actions, uiConfig, set: !!set, patch, }
+        return { uid, type, name, value, actions, uiConfig, set: !!set, patch, schema: _schema }
       }
       return { type: "unknown", name: k }
     }))

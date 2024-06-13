@@ -61,7 +61,7 @@ export const createSimpleHttpClient = <T extends URPC_Schema>(args: { url: strin
           })
         }).then(res => res.json())
       },
-      async action(params: { name: string, action: string, value: any }) {
+      async action(params: { name: string, action: string, value: any, input?: any }) {
         return fetch(`${args.url}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -70,7 +70,19 @@ export const createSimpleHttpClient = <T extends URPC_Schema>(args: { url: strin
             params
           })
         }).then(res => res.json())
-      }
+      },
+      async call<R extends keyof T>(params: {
+        method: R, input: Partial<T[R] extends URPC_Function<infer Z, any> ? Z : never>
+      }): Promise<T[R] extends URPC_Function<any, infer Z> ? Z : never> {
+        return fetch(`${args.url}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: "var.call",
+            params
+          })
+        }).then(res => res.json())
+      },
     }
   }
 }
@@ -125,18 +137,30 @@ export const createServerClient = <T extends URPC_Schema>({ urpc }: { urpc: URPC
         const res = await uvar.patch?.onPatch!(params.ops)
         return res
       },
-      async action(params: { name: string, action: string, value: any }) {
+      async action(params: { name: string, action: string, value: any, input?: any }) {
         const uvar = (urpc.uidSchemas[params.name] || urpc.falttenSchema[params.name]) as URPC_Variable
         if (!uvar) {
           throw new Error("invalid var name")
         }
         const action = uvar._schema![params.action]
-        if (!action) {
+        if (!action || action.type !== "action") {
           throw new Error("invalid action name")
         }
-        if (action.type !== "action") throw new Error("invalid action")
         //@ts-ignore
-        return action.call(params.value)
+        return action.func(params)
+      },
+      async call(params: { name: string, method: string, value: any, input?: any, }) {
+        const uvar = (urpc.uidSchemas[params.name] || urpc.falttenSchema[params.name]) as URPC_Variable
+        if (!uvar) {
+          throw new Error("invalid var name")
+        }
+        const func = uvar._schema![params.method]
+        if (!func || func.type !== "func") {
+          throw new Error("invalid func name")
+        }
+        params.value = uvar.value
+        //@ts-ignore
+        return func.func(params)
       },
     }
   }
