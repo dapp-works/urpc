@@ -105,12 +105,13 @@ export class URPC<T extends URPC_Schema = any> {
       return value
     }
     args.patch = Object.assign({}, {
+      enable: true,
       allowCreate: true,
       allowDelete: true,
       allowUpdate: true,
-      autoPatch: {
+      autoPatch: Object.assign({}, {
         target: args.get
-      },
+      }, args.patch?.autoPatch || {}),
       onPatch: async (ops) => {
         ops.forEach(async op => {
           if (op.op == 'add' && op.path == '/-') {
@@ -126,7 +127,7 @@ export class URPC<T extends URPC_Schema = any> {
         const value = await args.get!()
 
         if (!isBoolean(args.patch?.autoPatch) && !!args.patch?.autoPatch?.target) {
-          return applyPatch(args.patch.autoPatch.target(), ops).newDocument
+          return applyPatch(await args.patch.autoPatch.target(), ops).newDocument
         }
 
         //@ts-ignore
@@ -152,8 +153,14 @@ export class URPC<T extends URPC_Schema = any> {
   }
 
 
-  async loadFull() {
-    return Promise.all(Object.entries(this.falttenSchema).map(async ([k, v]) => {
+  async loadFull(params?: { namespace: string }) {
+    return Promise.all(Object.entries(this.falttenSchema).filter(([k, v]) => {
+      if (params?.namespace) {
+        if (!k.startsWith(params.namespace)) return
+      }
+      return [k, v]
+    }).map(async ([k, v]) => {
+
       if (v.type == "func") {
         const { uid, type, input, name, } = v
         const uiConfig = typeof v.uiConfig == "function" ? await v.uiConfig() : v.uiConfig

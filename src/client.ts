@@ -6,12 +6,13 @@ import get from "lodash.get"
 export const createSimpleHttpClient = <T extends URPC_Schema>(args: { url: string }) => {
   return {
     schema: {
-      async loadFull(): Promise<ReturnType<URPC<T>["loadFull"]>> {
+      async loadFull(params?: Parameters<URPC<T>["loadFull"]>[0]): Promise<ReturnType<URPC<T>["loadFull"]>> {
         return fetch(`${args.url}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: "schema.loadFull",
+            params,
           })
         }).then(res => res.json())
       },
@@ -99,8 +100,8 @@ export const createServerClient = <T extends URPC_Schema>({ urpc }: { urpc: URPC
       return func(params)
     },
     schema: {
-      async loadFull() {
-        return urpc.loadFull()
+      async loadFull(args: Parameters<URPC<T>["loadFull"]>[0]) {
+        return urpc.loadFull(args)
       },
       async loadVars() {
         return urpc.loadVars()

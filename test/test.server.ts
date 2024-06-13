@@ -28,15 +28,15 @@ export const urpc = new URPC({
   schemas: {
     object: {
       func1,
+
       sum1: URPC.Func({
         input: { a: 0, b: 0 },
         func: ({ input }) => input.a + input.b,
       }),
-      data1: URPC.Var({ get: async () => data }),
+      data1: URPC.Var({ get: async () => data, }),
       collections: URPC.Var({
         get: async () => collections,
-        patch: {
-        },
+
         schema: (val) => {
           return {
             name: {
@@ -60,8 +60,8 @@ export const urpc = new URPC({
         }
       })
     },
-  }
 
+  }
 })
 
 
