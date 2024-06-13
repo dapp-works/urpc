@@ -1,6 +1,6 @@
 {
   "name": "@dappworks/urpc",
-  "version": "0.0.34",
+  "version": "0.0.35",
   "module": "index.ts",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

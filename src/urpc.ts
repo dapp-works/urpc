@@ -29,7 +29,7 @@ export interface URPC_Function<T extends Object = {}, R extends any = any, V = a
   name?: string
   path?: string
   input: T
-  func: (args: { input: T, val?: Item<R> }) => V
+  func: (args: { input: T, val?: R }) => V
   uiConfig?: () => FormConfigType<T>
 }
 
@@ -58,7 +58,7 @@ export interface URPC_Variable<
   name?: string
   path?: string
   get: G
-  value: ReturnType<G>
+  value: R
   schema?: (val: R) => {
     [F in keyof Item<R>]?: SchemaItem<any, R>
   } & {
