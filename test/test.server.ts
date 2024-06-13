@@ -47,14 +47,12 @@ export const urpc = new URPC({
             log: URPC.Action({
               input: { i: 0 },
               func: ({ input, val }) => {
-                val.name
                 console.log(val)
               }
             }),
             create: URPC.Func({
               input: { name: "" },
               func: ({ input, val }) => {
-                val?.map(i => i.name)
                 collections.push({ name: input.name })
               }
             }),
