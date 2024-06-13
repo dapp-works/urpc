@@ -14,11 +14,11 @@ let data = {
 const func1 = URPC.Func({
   input: { add_fruit: "banana" },
   func: ({ input }) => data.enums.push(input.add_fruit),
-  uiConfig: () => ({
+  uiConfig: {
     add_fruit: {
       selectOptions: data.enums.map(i => ({ label: i, value: i }))
     }
-  })
+  }
 })
 
 let collections = [{ name: "Data1" }, { name: "Data2" }]
@@ -54,7 +54,7 @@ export const urpc = new URPC({
               input: { name: "" },
               func: ({ input, val }) => {
                 collections.push({ name: input.name })
-              }
+              },
             }),
           }
         }

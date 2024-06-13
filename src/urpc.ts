@@ -30,7 +30,7 @@ export interface URPC_Function<T extends Object = {}, R extends any = any, V = a
   path?: string
   input: T
   func: (args: { input: T, val?: R }) => V
-  uiConfig?: () => FormConfigType<T>
+  uiConfig?: (() => FormConfigType<T>) | FormConfigType<T>
 }
 
 
@@ -155,8 +155,9 @@ export class URPC<T extends URPC_Schema = any> {
   async loadFull() {
     return Promise.all(Object.entries(this.falttenSchema).map(async ([k, v]) => {
       if (v.type == "func") {
-        const { uid, type, input, name, uiConfig } = v
-        return { uid, type, name, input, uiConfig: uiConfig ? uiConfig() : null }
+        const { uid, type, input, name, } = v
+        const uiConfig = typeof v.uiConfig == "function" ? await v.uiConfig() : v.uiConfig
+        return { uid, type, name, input, uiConfig: uiConfig }
       }
       if (v.type == "var") {
         const { uid, type, get, set, name, patch } = v as URPC_Variable
@@ -169,9 +170,14 @@ export class URPC<T extends URPC_Schema = any> {
           v._schema = _schema
           Object.entries(_schema).forEach(([k, s]) => {
             if (!s) return
-            if (s.type == "action") {
-              actions.push(k)
+            if (s.uiConfig && typeof s.uiConfig == "function") {
+              uiConfig[k] = s.uiConfig()
             }
+            //@ts-ignore
+            if (s.type)
+              if (s.type == "action") {
+                actions.push(k)
+              }
             //@ts-ignore
             if (s.uiConfig) {
               //@ts-ignore
