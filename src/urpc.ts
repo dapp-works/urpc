@@ -155,10 +155,9 @@ export class URPC<T extends URPC_Schema = any> {
 
   async loadFull(params?: { namespace: string }) {
     return Promise.all(Object.entries(this.falttenSchema).filter(([k, v]) => {
-      if (params?.namespace) {
-        if (!k.startsWith(params.namespace)) return
-      }
-      return [k, v]
+      if (params?.namespace && !k.startsWith(params.namespace)) return
+
+      return true
     }).map(async ([k, v]) => {
 
       if (v.type == "func") {
@@ -199,8 +198,12 @@ export class URPC<T extends URPC_Schema = any> {
     }))
   }
 
-  async loadVars() {
-    return Promise.all(Object.entries(this.falttenSchema).filter(([k, v]) => v.type == "var").map(async ([k, v]) => {
+  async loadVars(params?: { namespace: string }) {
+    return Promise.all(Object.entries(this.falttenSchema).filter(([k, v]) => {
+      if (params?.namespace && !k.startsWith(params.namespace)) return
+      if (v.type == "var")
+        return v.type == "var"
+    }).map(async ([k, v]) => {
       const { get, name } = v as URPC_Variable
       const value = await get()
       return { name, value }

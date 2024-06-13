@@ -16,12 +16,13 @@ export const createSimpleHttpClient = <T extends URPC_Schema>(args: { url: strin
           })
         }).then(res => res.json())
       },
-      async loadVars(): Promise<ReturnType<URPC<T>["loadVars"]>> {
+      async loadVars(params?: Parameters<URPC<T>["loadVars"]>[0]): Promise<ReturnType<URPC<T>["loadVars"]>> {
         return fetch(`${args.url}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: "schema.loadVars",
+            params
           })
         }).then(res => res.json())
       }
@@ -100,11 +101,11 @@ export const createServerClient = <T extends URPC_Schema>({ urpc }: { urpc: URPC
       return func(params)
     },
     schema: {
-      async loadFull(args: Parameters<URPC<T>["loadFull"]>[0]) {
-        return urpc.loadFull(args)
+      async loadFull(params: Parameters<URPC<T>["loadFull"]>[0]) {
+        return urpc.loadFull(params)
       },
-      async loadVars() {
-        return urpc.loadVars()
+      async loadVars(params?: Parameters<URPC<T>["loadFull"]>[0]) {
+        return urpc.loadVars(params)
       }
     },
     func: {
