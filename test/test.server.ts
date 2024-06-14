@@ -7,6 +7,7 @@ import { createServerClient } from '../src/client';
 
 let data = {
   foo: 123,
+  bool: true,
   bar: "test1234",
   enums: ["apple", "orange"],
 };
@@ -41,7 +42,8 @@ export const urpc = new URPC({
           return {
             name: {
               uiConfig: {
-                "description": "test"
+                "description": "test",
+                "required": true
               }
             },
             log: URPC.Action({
