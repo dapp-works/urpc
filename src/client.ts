@@ -74,6 +74,7 @@ export const createSimpleHttpClient = <T extends URPC_Schema>(args: { url: strin
         }).then(res => res.json())
       },
       async call<R extends keyof T>(params: {
+        name: string,
         method: R, input: Partial<T[R] extends URPC_Function<infer Z, any> ? Z : never>
       }): Promise<T[R] extends URPC_Function<any, infer Z> ? Z : never> {
         return fetch(`${args.url}`, {
@@ -114,7 +115,7 @@ export const createServerClient = <T extends URPC_Schema>({ urpc }: { urpc: URPC
         if (!ufunc) {
           throw new Error("invalid func name")
         }
-        return ufunc.func({ input: params.input })
+        return ufunc.func(params)
       }
     },
     var: {
@@ -149,7 +150,7 @@ export const createServerClient = <T extends URPC_Schema>({ urpc }: { urpc: URPC
           throw new Error("invalid action name")
         }
         //@ts-ignore
-        return action.func(params)
+        return action.func({ ...params, val: params.value })
       },
       async call(params: { name: string, method: string, value: any, input?: any, }) {
         const uvar = (urpc.uidSchemas[params.name] || urpc.falttenSchema[params.name]) as URPC_Variable
@@ -162,7 +163,7 @@ export const createServerClient = <T extends URPC_Schema>({ urpc }: { urpc: URPC
         }
         params.value = uvar.value
         //@ts-ignore
-        return func.func(params)
+        return func.func({ ...params, val: uvar.value })
       },
     }
   }

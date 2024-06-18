@@ -9,60 +9,92 @@ let data = {
   foo: 123,
   bool: true,
   bar: "test1234",
-  enums: ["apple", "orange"],
+  enums: ["Apple", "Banana", "Orange"],
 };
-
-const func1 = URPC.Func({
-  input: { add_fruit: "banana" },
-  func: ({ input }) => data.enums.push(input.add_fruit),
-  uiConfig: {
-    add_fruit: {
-      selectOptions: data.enums.map(i => ({ label: i, value: i }))
-    }
-  }
-})
-
 let collections = [{ name: "Data1" }, { name: "Data2" }]
 
-// server
+
+const fruit = URPC.enum(() => ({
+  enums: data.enums,
+  default: "Apple"
+}))
+
+
+const func1 = URPC.Func({
+  input: { add_fruit: fruit },
+  func: ({ input }) => {
+    data.enums.push(input.add_fruit)
+  },
+})
+
+const test = URPC.Namespace({
+  test: URPC.Var({
+    get: async () => data, schema: () => ({
+      enums: {}
+    })
+  }),
+})
+
+
+const object = URPC.Namespace({
+  func1,
+  sum1: URPC.Func({
+    input: { a: 0, b: 0 },
+    func: ({ input }) => input.a + input.b,
+  }),
+  collections: URPC.Var({
+    get: async () => collections,
+    schema: (val) => ({
+      name: {
+        enums: [1, 2, 3],
+        required: true,
+        schema: () => ({
+          log: URPC.Action({
+            func: ({ val }) => {
+              console.log(val)
+            }
+          }),
+          create: URPC.Func({
+            input: { name: "" },
+            func: ({ input, val }) => {
+              collections.push({ name: input.name })
+            },
+          }),
+        })
+      },
+      log: URPC.Action({
+        input: { i: 0 },
+        func: ({ input, val }) => {
+          console.log(val)
+        },
+      }),
+      create: URPC.Func({
+        input: { name: "" },
+        func: ({ input, val }) => {
+          collections.push({ name: input.name })
+        },
+        uiConfig: {
+          name: {
+            required: true,
+          }
+        },
+        schema: () => ({
+          log: URPC.Action({
+            input: { i: 0 },
+            func: ({ input, val }) => {
+              console.log(val)
+            },
+          }),
+        })
+      }),
+    })
+  })
+})
+
+
 export const urpc = new URPC({
   schemas: {
-    object: {
-      func1,
-
-      sum1: URPC.Func({
-        input: { a: 0, b: 0 },
-        func: ({ input }) => input.a + input.b,
-      }),
-      data1: URPC.Var({ get: async () => data, }),
-      collections: URPC.Var({
-        get: async () => collections,
-
-        schema: (val) => {
-          return {
-            name: {
-              uiConfig: {
-                "description": "test",
-                "required": true
-              }
-            },
-            log: URPC.Action({
-              input: { i: 0 },
-              func: ({ input, val }) => {
-                console.log(val)
-              }
-            }),
-            create: URPC.Func({
-              input: { name: "" },
-              func: ({ input, val }) => {
-                collections.push({ name: input.name })
-              },
-            }),
-          }
-        }
-      })
-    },
-
+    test, object
   }
 })
 
