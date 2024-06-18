@@ -191,6 +191,67 @@ export class URPC<T extends URPC_Schema = any> {
     this.uidSchemas = keyby(Object.values(this.falttenSchema), "uid")
   }
 
+  static utils = {
+    async formatFunc(v: URPC_Function) {
+      const { uid, type, name, input, func } = v
+
+      const uiConfig = typeof v.uiConfig == "function" ? await v.uiConfig() : v.uiConfig
+      const _schema = typeof v.schema == "function" ? v.schema() : v.schema || {}
+      //@ts-ignore
+      const ctx = { uid, type, name, uiConfig, schema: _schema, func, input: {} } as Partial<URPC_Function>
+
+
+      await Promise.all(Object.entries(input).map(async ([k, v]: [string, any]) => {
+        let input = v
+        if (v.get) {
+          const cls = v as URPC_Class
+          const val = await cls.get()
+          input = val.default
+
+          if (val.enums) {
+            set(ctx, `uiConfig[${k}].selectOptions`, val.enums.map(e => ({ label: e.label ?? e, value: e.value ?? e })))
+          }
+        }
+        //@ts-ignore
+        ctx.input[k] = input
+      }))
+      return ctx
+    },
+    async formatSchema(ctx: URPC_Entity) {
+      if (ctx.schema) {
+        await Promise.all(Object.entries(ctx.schema).map(async ([k, s]) => {
+          if (!s) return
+          //@ts-ignore
+          if (s.schema) {
+            //@ts-ignore
+            s.schema = s.schema(ctx.value)
+          }
+          if (s.type) {
+            if (typeof s.type == "string") {
+
+            } else {
+              //@ts-ignore
+              const val = await s.type.get()
+              if (val.enums) {
+                set(s, `uiConfig.selectOptions`, val.enums.map(e => ({ label: e.label ?? e, value: e.value ?? e })))
+              }
+            }
+          }
+          //@ts-ignore
+          if (s.uiConfig && typeof s.uiConfig == "function") {
+            //@ts-ignore
+            s.uiConfig = s.uiConfig()
+          }
+          //@ts-ignore
+          if (s.input) {
+            //@ts-ignore
+            ctx.schema[k] = await URPC.utils.formatFunc(s)
+          }
+        }))
+      }
+    }
+  }
+
 
   async loadFull(params?: { namespace: string }) {
     return Promise.all(Object.entries(this.falttenSchema).filter(([k, v]) => {
@@ -200,67 +261,19 @@ export class URPC<T extends URPC_Schema = any> {
     }).map(async ([k, v]) => {
 
       if (v.type == "func") {
-        const { uid, type, name, input } = v
-
-        const uiConfig = typeof v.uiConfig == "function" ? await v.uiConfig() : v.uiConfig
-        const _schema = v.schema ? v.schema() : {}
-        //@ts-ignore
-        const ctx = { uid, type, name, uiConfig, schema: _schema, input: {} } as Partial<URPC_Function>
-
-
-        await Promise.all(Object.entries(input).map(async ([k, v]: [string, any]) => {
-          let input = v
-          if (v.get) {
-            const cls = v as URPC_Class
-            const val = await cls.get()
-            input = val.default
-
-            if (val.enums) {
-              set(ctx, `uiConfig[${k}].selectOptions`, val.enums.map(e => ({ label: e.label ?? e, value: e.value ?? e })))
-            }
-          }
-          //@ts-ignore
-          ctx.input[k] = input
-
-
-        }))
-        return ctx
+        return URPC.utils.formatFunc(v as URPC_Function)
       }
       if (v.type == "var") {
         const { uid, type, get, name, patch } = v as URPC_Variable
         const value = await get()
-        const ctx = { uid, type, name, value, set: !!v.set, patch, }
-        //@ts-ignore
         const _schema = v.schema ? v.schema(value) : {}
-        // let actions: string[] = []
-        // let uiConfig: FormConfigType<Item<ReturnType<any>>> = {}
-        if (_schema) {
-          v._schema = _schema
-          await Promise.all(Object.entries(_schema).map(async ([k, s]) => {
-            if (!s) return
-            //@ts-ignore
-            if (s.schema) {
-              //@ts-ignore
-              s.schema = s.schema(value)
-            }
-            if (s.type) {
-              if (typeof s.type == "string") {
 
-              } else {
-                const val = await s.type.get()
-                if (val.enums) {
-                  set(s, `uiConfig.selectOptions`, val.enums.map(e => ({ label: e.label ?? e, value: e.value ?? e })))
-                }
-              }
-            }
-            if (s.uiConfig && typeof s.uiConfig == "function") {
-              //@ts-ignore
-              s.uiConfig = s.uiConfig()
-            }
-          }))
-        }
+        const ctx = { uid, type, name, value, set: !!v.set, patch, schema: _schema }
         //@ts-ignore
-        ctx.schema = _schema
+        await URPC.utils.formatSchema(ctx)
+        //@ts-ignore
+
+        v._schema = ctx.schema
 
         return ctx
       }

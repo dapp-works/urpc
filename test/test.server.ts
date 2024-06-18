@@ -49,30 +49,18 @@ const object = URPC.Namespace({
     get: async () => collections,
     schema: (val) => ({
       name: {
-        enums: [1, 2, 3],
-        required: true,
-        schema: () => ({
-          log: URPC.Action({
-            func: ({ val }) => {
-              console.log(val)
-            }
-          }),
-          create: URPC.Func({
-            input: { name: "" },
-            func: ({ input, val }) => {
-              collections.push({ name: input.name })
-            },
-          }),
-        })
+        uiConfig: {
+          required: true,
+        }
       },
       log: URPC.Action({
-        input: { i: 0 },
+        input: { i: 0, fruit },
         func: ({ input, val }) => {
           console.log(val)
         },
       }),
       create: URPC.Func({
-        input: { name: "" },
+        input: { name: "", fruit },
         func: ({ input, val }) => {
           collections.push({ name: input.name })
         },
@@ -80,15 +68,7 @@ const object = URPC.Namespace({
           name: {
             required: true,
           }
-        },
-        schema: () => ({
-          log: URPC.Action({
-            input: { i: 0 },
-            func: ({ input, val }) => {
-              console.log(val)
-            },
-          }),
-        })
+        }
       }),
     })
   })
