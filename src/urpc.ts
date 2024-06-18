@@ -27,7 +27,7 @@ type ExtractReturnType<T> = T extends (...args: any[]) => infer R ? R : never;
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 
 type SchemaItem<T extends Object = {}, R extends any = any> = {
-  type?: string
+  type?: string | URPC_Class
   uiConfig?: FormConfigItem
   // schema?: URPC_SchemaField<R>
 } | URPC_Action<T, R> | URPC_Function<T, R, any>
@@ -214,8 +214,6 @@ export class URPC<T extends URPC_Schema = any> {
             const val = await cls.get()
             input = val.default
 
-
-
             if (val.enums) {
               set(ctx, `uiConfig[${k}].selectOptions`, val.enums.map(e => ({ label: e.label ?? e, value: e.value ?? e })))
             }
@@ -225,33 +223,45 @@ export class URPC<T extends URPC_Schema = any> {
 
 
         }))
-        console.log(ctx.input)
         return ctx
       }
       if (v.type == "var") {
-        const { uid, type, get, set, name, patch } = v as URPC_Variable
+        const { uid, type, get, name, patch } = v as URPC_Variable
         const value = await get()
-
+        const ctx = { uid, type, name, value, set: !!v.set, patch, }
+        //@ts-ignore
         const _schema = v.schema ? v.schema(value) : {}
         // let actions: string[] = []
         // let uiConfig: FormConfigType<Item<ReturnType<any>>> = {}
         if (_schema) {
           v._schema = _schema
-          Object.entries(_schema).forEach(([k, s]) => {
+          await Promise.all(Object.entries(_schema).map(async ([k, s]) => {
             if (!s) return
             //@ts-ignore
             if (s.schema) {
               //@ts-ignore
               s.schema = s.schema(value)
             }
+            if (s.type) {
+              if (typeof s.type == "string") {
+
+              } else {
+                const val = await s.type.get()
+                if (val.enums) {
+                  set(s, `uiConfig.selectOptions`, val.enums.map(e => ({ label: e.label ?? e, value: e.value ?? e })))
+                }
+              }
+            }
             if (s.uiConfig && typeof s.uiConfig == "function") {
               //@ts-ignore
               s.uiConfig = s.uiConfig()
             }
-          })
+          }))
         }
+        //@ts-ignore
+        ctx.schema = _schema
 
-        return { uid, type, name, value, set: !!set, patch, schema: _schema }
+        return ctx
       }
       return { type: "unknown", name: k }
     }))

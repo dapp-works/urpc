@@ -8,7 +8,7 @@ import { createServerClient } from '../src/client';
 let data = {
   foo: 123,
   bool: true,
-  bar: "test1234",
+  enum_item: "Apple",
   enums: ["Apple", "Banana", "Orange"],
 };
 let collections = [{ name: "Data1" }, { name: "Data2" }]
@@ -29,12 +29,14 @@ const func1 = URPC.Func({
 
 const test = URPC.Namespace({
   test: URPC.Var({
-    get: async () => data, schema: () => ({
-      enums: {}
+    get: async () => data,
+    schema: () => ({
+      enum_item: {
+        type: fruit
+      }
     })
   }),
 })
-
 
 const object = URPC.Namespace({
   func1,
