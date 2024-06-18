@@ -33,7 +33,11 @@ const test = URPC.Namespace({
       enum_item: {
         type: fruit
       }
-    })
+    }),
+    set: async (val) => {
+      const newVal = Object.assign(data, val)
+      return newVal
+    },
   }),
 })
 
