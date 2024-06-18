@@ -40,11 +40,12 @@ export type URPC_Action<T extends Object = {}, R extends any = any> = {
   schema?: URPC_SchemaField<R>
 }
 
-
-export type URPC_Class<G extends () => {
+export type URPC_ClassGet = () => {
   enums?: any[] | { label: any, value: any }[]
   default?: any
-} = () => any> = {
+}
+
+export type URPC_Class<G extends URPC_ClassGet = URPC_ClassGet> = {
   class: string
   get: G
 }

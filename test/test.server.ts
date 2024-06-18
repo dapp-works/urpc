@@ -19,7 +19,6 @@ const fruit = URPC.enum(() => ({
   default: "Apple"
 }))
 
-
 const func1 = URPC.Func({
   input: { add_fruit: fruit },
   func: ({ input }) => {
@@ -37,6 +36,8 @@ const test = URPC.Namespace({
     })
   }),
 })
+
+
 
 const object = URPC.Namespace({
   func1,
