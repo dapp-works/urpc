@@ -26,7 +26,7 @@ const func1 = URPC.Func({
   },
 })
 
-const test = URPC.Namespace({
+const test = {
   test: URPC.Var({
     get: async () => data,
     schema: () => ({
@@ -39,11 +39,11 @@ const test = URPC.Namespace({
       return newVal
     },
   }),
-})
+}
 
 
 
-const object = URPC.Namespace({
+const object = {
   func1,
   sum1: URPC.Func({
     input: { a: 0, b: 0 },
@@ -76,7 +76,7 @@ const object = URPC.Namespace({
       }),
     })
   })
-})
+}
 
 
 export const urpc = new URPC({
