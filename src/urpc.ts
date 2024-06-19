@@ -3,7 +3,7 @@ import type { UiSchema } from '@rjsf/utils';
 import { v4 as uuid } from "uuid"
 import keyby from "lodash.keyby"
 import { applyPatch, type Operation, type PatchResult } from "fast-json-patch"
-import { isBoolean, set } from "lodash";
+import set from "lodash.set"
 
 
 export type FormConfigType<T> = {
@@ -32,13 +32,7 @@ type SchemaItem<T extends Object = {}, R extends any = any> = {
   // schema?: URPC_SchemaField<R>
 } | URPC_Action<T, R> | URPC_Function<T, R, any>
 
-export type URPC_Action<T extends Object = {}, R extends any = any> = {
-  type?: "action"
-  input?: T
-  func?: (args: { val: Item<R>, input: T }) => any
-  uiConfig?: FormConfigItem
-  schema?: URPC_SchemaField<R>
-}
+
 
 export type URPC_ClassGet = () => {
   enums?: any[] | { label: any, value: any }[]
@@ -46,7 +40,7 @@ export type URPC_ClassGet = () => {
 }
 
 export type URPC_Class<G extends URPC_ClassGet = URPC_ClassGet> = {
-  class: string
+  class?: string
   get: G
 }
 
@@ -56,13 +50,23 @@ export type URPC_Input<T> = {
   : T[K];
 }
 
+export type URPC_Action<T extends Object = {}, R extends any = any> = {
+  type?: "action"
+  input?: T | (() => T)
+  confirm?: boolean
+  func?: (args: { val: Item<R>, input: T }) => any
+  uiConfig?: FormConfigItem
+  schema?: URPC_SchemaField<R>
+}
+
 
 export interface URPC_Function<T extends Object = {}, R extends any = any, V = any> {
   uid: string
   type?: "func"
   name?: string
   path?: string
-  input: T
+  confirm?: boolean
+  input: T | T | (() => T)
   func: (args: { input: URPC_Input<T>, val?: R }) => V
   uiConfig?: (() => FormConfigType<T>) | FormConfigType<T>
   schema?: URPC_SchemaField<R>
@@ -164,7 +168,9 @@ export class URPC<T extends URPC_Schema = any> {
         })
         const value = await args.get!()
 
-        if (!isBoolean(args.patch?.autoPatch) && !!args.patch?.autoPatch?.target) {
+        //@ts-ignore
+        if (!!args.patch?.autoPatch?.target) {
+          //@ts-ignore
           return applyPatch(await args.patch.autoPatch.target(), ops).newDocument
         }
 
@@ -193,13 +199,13 @@ export class URPC<T extends URPC_Schema = any> {
 
   static utils = {
     async formatFunc(v: URPC_Function) {
-      const { uid, type, name, input, func } = v
+      const { uid, type, name, func } = v
 
       const uiConfig = typeof v.uiConfig == "function" ? await v.uiConfig() : v.uiConfig
       const _schema = typeof v.schema == "function" ? v.schema() : v.schema || {}
       //@ts-ignore
       const ctx = { uid, type, name, uiConfig, schema: _schema, func, input: {} } as Partial<URPC_Function>
-
+      const input = typeof v.input == 'function' ? await v.input() : v.input || {}
 
       await Promise.all(Object.entries(input).map(async ([k, v]: [string, any]) => {
         let input = v

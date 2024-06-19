@@ -1,6 +1,5 @@
 import set from "lodash.set"
 
-
 export const utils = {
   isNamespace: o => o && !o.type,
   flattenSchema(obj: any, prefix?) {
@@ -28,36 +27,3 @@ export const utils = {
     }, {})
   }
 }
-
-// console.log(utils.flattenSchema({
-//   sum: {
-//     type: "func",
-//   },
-//   var: {
-//     type: "var",
-//     value: 1
-//   },
-//   obj: {
-//     a: { type: "var" },
-//     b: { type: "func" }
-//   }
-// }))
-// console.log(utils.wrapSchema({
-//   sum: {
-//     type: "func",
-//     path: "sum",
-//   },
-//   var: {
-//     type: "var",
-//     value: 1,
-//     path: "var",
-//   },
-//   "obj.a": {
-//     type: "var",
-//     path: "obj.a",
-//   },
-//   "obj.b": {
-//     type: "func",
-//     path: "obj.b",
-//   },
-// }))

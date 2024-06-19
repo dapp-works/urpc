@@ -20,7 +20,7 @@ const fruit = URPC.enum(() => ({
 }))
 
 const func1 = URPC.Func({
-  input: { add_fruit: fruit },
+  input: { test: data.foo, add_fruit: fruit },
   func: ({ input }) => {
     data.enums.push(input.add_fruit)
   },
