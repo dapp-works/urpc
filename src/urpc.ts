@@ -200,7 +200,7 @@ export class URPC<T extends URPC_Schema = any> {
         }
 
         //@ts-ignore
-        ctx.input[k] = input.default
+        ctx.input[k] = input.default || input
       }))
       return ctx
     },
