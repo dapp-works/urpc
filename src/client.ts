@@ -1,4 +1,3 @@
-import type { Operation } from "fast-json-patch"
 import type { URPC_Function, URPC_Variable, URPC, URPC_Schema } from "./index"
 import get from "lodash.get"
 
@@ -49,16 +48,6 @@ export const createSimpleHttpClient = <T extends URPC_Schema>(args: { url: strin
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             name: "var.set",
-            params
-          })
-        }).then(res => res.json())
-      },
-      async patch(params: { name: string, ops: Operation[] }) {
-        return fetch(`${args.url}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: "var.patch",
             params
           })
         }).then(res => res.json())
@@ -129,24 +118,14 @@ export const createServerClient = <T extends URPC_Schema>({ urpc }: { urpc: URPC
         }
         return uvar.set(params.value)
       },
-      async patch(params: { name: string, ops: Operation[] }) {
-        const uvar = (urpc.uidSchemas[params.name] || urpc.falttenSchema[params.name]) as URPC_Variable
-        if (!uvar) {
-          throw new Error("invalid var name")
-        }
-        if (!uvar.patch) {
-          throw new Error("variable can't be set")
-        }
-        const res = await uvar.patch?.onPatch!(params.ops)
-        return res
-      },
+
       async action(params: { name: string, action: string, value: any, input?: any }) {
         const uvar = (urpc.uidSchemas[params.name] || urpc.falttenSchema[params.name]) as URPC_Variable
         if (!uvar) {
           throw new Error("invalid var name")
         }
         const action = uvar._schema![params.action]
-        if (!action || action.type !== "action") {
+        if (!action) {
           throw new Error("invalid action name")
         }
         //@ts-ignore
@@ -158,7 +137,7 @@ export const createServerClient = <T extends URPC_Schema>({ urpc }: { urpc: URPC
           throw new Error("invalid var name")
         }
         const func = uvar._schema![params.method]
-        if (!func || func.type !== "func") {
+        if (!func) {
           throw new Error("invalid func name")
         }
         params.value = uvar.value

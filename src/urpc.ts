@@ -2,7 +2,6 @@ import { utils } from "./utils"
 import type { UiSchema } from '@rjsf/utils';
 import { v4 as uuid } from "uuid"
 import keyby from "lodash.keyby"
-import { applyPatch, type Operation, type PatchResult } from "fast-json-patch"
 import set from "lodash.set"
 
 
@@ -26,58 +25,48 @@ export type Item<T> = T extends (infer U)[] ? U : T;
 type ExtractReturnType<T> = T extends (...args: any[]) => infer R ? R : never;
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 
-type SchemaItem<T extends Object = {}, R extends any = any> = {
+
+
+
+// export type URPC_ClassGet = () => {
+//   enums?: any[] | { label: any, value: any }[]
+//   default?: any
+// }
+
+export type URPC_Class<T extends any = any> = {
   type?: string | URPC_Class
+  enums: T[] | { label: T, value: T }[]
+  default: T
   uiConfig?: FormConfigItem
-  // schema?: URPC_SchemaField<R>
-} | URPC_Action<T, R> | URPC_Function<T, R, any>
-
-
-
-export type URPC_ClassGet = () => {
-  enums?: any[] | { label: any, value: any }[]
-  default?: any
-}
-
-export type URPC_Class<G extends URPC_ClassGet = URPC_ClassGet> = {
-  class?: string
-  get: G
 }
 
 export type URPC_Input<T> = {
   [K in keyof T]: T[K] extends URPC_Class<infer G>
-  ? ReturnType<G>["default"]
+  ? G
   : T[K];
 }
 
-export type URPC_Action<T extends Object = {}, R extends any = any> = {
+
+export type URPC_Action<T extends Object = {}, R extends any = any, V extends URPC_Variable = any> = {
   type?: "action"
-  input?: T | (() => T)
+  input: T | ((args: V) => T)
   confirm?: boolean
-  func?: (args: { val: Item<R>, input: T }) => any
+  func?: (args: { input: URPC_Input<T>, val: Item<R> }) => any
   uiConfig?: FormConfigItem
-  schema?: URPC_SchemaField<R>
+  // schema?: URPC_SchemaField<R>
 }
 
 
-export interface URPC_Function<T extends Object = {}, R extends any = any, V = any> {
+export interface URPC_Function<T extends Object = {}, R extends any = any, I extends any = any, V extends URPC_Variable = any> {
   uid: string
   type?: "func"
   name?: string
   path?: string
   confirm?: boolean
-  input: T | T | (() => T)
-  func: (args: { input: URPC_Input<T>, val?: R }) => V
+  input: T | ((args: V) => T)
+  func: (args: { input: URPC_Input<T>, val?: R extends {} ? R : undefined }) => I
   uiConfig?: (() => FormConfigType<T>) | FormConfigType<T>
-  schema?: URPC_SchemaField<R>
-}
-
-
-
-export type URPC_SchemaField<R extends any = any> = (val?: R) => {
-  [F in keyof Item<R>]?: SchemaItem<any, R>
-} & {
-  [key: string]: SchemaItem<any, R>
+  // schema?: URPC_SchemaField<R>
 }
 
 
@@ -91,26 +80,30 @@ export interface URPC_Variable<
   path?: string
   get: G
   value: R
-  schema?: URPC_SchemaField<R>
-  _schema?: ReturnType<Required<URPC_Variable<R>>["schema"]>
-  // actions?: ActionType<Item<T>>
-  patch?: {
-    enable?: boolean
-    allowCreate?: boolean
-    allowDelete?: boolean
-    allowUpdate?: boolean,
-    autoPatch?: boolean | {
-      target: () => any
-    }
-    onCreate?: (value: Item<R>) => any
-    onUpdate?: (key, value) => any
-    onDelete?: (key: any) => any
-    onPatch?: (value: Operation[]) => Promise<PatchResult<any>>
-  }
+  schema?: URPC_SchemaField<R, URPC_Variable<G, R>>
+  _schema?: InferSchema<R, URPC_Variable<G, R>['schema']>
   set?: (val: R) => any
 }
 
-export type URPC_Entity = URPC_Function<any, any, any> | URPC_Variable<any> | URPC_Schema
+type SchemaItem<T extends Object = {}, R extends any = any, V extends URPC_Variable = any> = (() => URPC_Class) | URPC_Class | URPC_Action<T, R, V> | URPC_Function<T, R, any, V>
+
+
+type InferSchema<R, S> = S extends URPC_SchemaField<R>
+  ? {
+    [K in keyof ReturnType<S>]: ReturnType<S>[K];
+  }
+  : never;
+
+
+export type URPC_SchemaField<R extends any = any, V extends URPC_Variable = any> = (val?: R) => {
+  [F in keyof Item<R>]?: SchemaItem<any, R, V>
+} & {
+  [key: string]: SchemaItem<any, R, V>
+}
+
+
+
+export type URPC_Entity = URPC_Function<any, any, any, any> | URPC_Variable<any, any> | URPC_Schema
 
 export type URPC_Schema = {
   [key: string]: URPC_Entity
@@ -122,14 +115,9 @@ export class URPC<T extends URPC_Schema = any> {
   falttenSchema: URPC_Schema
   uidSchemas: URPC_Schema
 
-  static enum<G extends URPC_Class["get"]>(get: G): URPC_Class<G> {
-    return {
-      class: "enum",
-      get: () => {
-        const res = get()
-        return res
-      }
-    } as URPC_Class<G>
+
+  static type<T extends any = any>(get: () => URPC_Class<T>): () => URPC_Class<T> {
+    return get
   }
 
   static Namespace(args: URPC_Entity): URPC_Entity {
@@ -146,46 +134,14 @@ export class URPC<T extends URPC_Schema = any> {
       args.value = value
       return value
     }
-    args.patch = Object.assign({}, {
-      enable: true,
-      allowCreate: true,
-      allowDelete: true,
-      allowUpdate: true,
-      autoPatch: Object.assign({}, {
-        target: args.get
-      }, args.patch?.autoPatch || {}),
-      onPatch: async (ops) => {
-        ops.forEach(async op => {
-          if (op.op == 'add' && op.path == '/-') {
-            args.patch?.onCreate && await args.patch.onCreate(op.value)
-          }
-          if (op.op == 'replace') {
-            args.patch?.onUpdate && await args.patch.onUpdate(op.path.replace("/", ""), op.value)
-          }
-          if (op.op == 'remove') {
-            args.patch?.onDelete && await args.patch.onDelete(op.path.replace("/", ""))
-          }
-        })
-        const value = await args.get!()
-
-        //@ts-ignore
-        if (!!args.patch?.autoPatch?.target) {
-          //@ts-ignore
-          return applyPatch(await args.patch.autoPatch.target(), ops).newDocument
-        }
-
-        //@ts-ignore
-        return value
-      }
-    } as typeof args.patch, args.patch || {})
-    return { ...args, type: "var", uid: uuid() } as URPC_Variable<G>
+    return { ...args, type: "var", uid: uuid(), } as URPC_Variable<G>
   }
-  static Func<T extends Object = {}, R = any, V = any>(args: Partial<URPC_Function<T, R, V>>): URPC_Function<T, R, V> {
-    const ctx = { ...args, type: "func", uid: uuid() } as URPC_Function<T, R, V>
+  static Func<T extends Object = {}, R extends any = any, I extends any = any, V extends URPC_Variable = any>(args: Partial<URPC_Function<T, R, I, V>>): URPC_Function<T, R, I, V> {
+    const ctx = { ...args, type: "func", uid: uuid() } as URPC_Function<T, R, I, V>
     return ctx
   }
-  static Action<T extends Object = {}, R = any>(args: Partial<URPC_Action<T, R>>): URPC_Action<T, R> {
-    return { ...args, type: "action", uid: uuid() } as URPC_Action<T, R>
+  static Action<T extends Object = {}, R extends any = any, V extends URPC_Variable = any>(args: Partial<URPC_Action<T, R, V>>): URPC_Action<T, R, V> {
+    return { ...args, type: "action", uid: uuid() } as URPC_Action<T, R, V>
   }
 
 
@@ -198,52 +154,80 @@ export class URPC<T extends URPC_Schema = any> {
   }
 
   static utils = {
-    async formatFunc(v: URPC_Function) {
-      const { uid, type, name, func } = v
+    async formatVar(v: URPC_Variable) {
+      const { uid, type, get, name } = v as URPC_Variable
+      const value = await get()
+      const _schema = v.schema ? v.schema(value) : {}
 
-      const uiConfig = typeof v.uiConfig == "function" ? await v.uiConfig() : v.uiConfig
-      const _schema = typeof v.schema == "function" ? v.schema() : v.schema || {}
+      const ctx = { uid, type, name, value, set: !!v.set, _schema }
+
       //@ts-ignore
-      const ctx = { uid, type, name, uiConfig, schema: _schema, func, input: {} } as Partial<URPC_Function>
-      const input = typeof v.input == 'function' ? await v.input() : v.input || {}
+      await URPC.utils.formatSchema(ctx)
+      v._schema = ctx._schema
+      //@ts-ignore
+      ctx.schema = ctx._schema
+      //@ts-ignore
+      ctx._schema = undefined
+
+
+
+      return ctx
+    },
+
+    async formatFunc(f: URPC_Function, v?: URPC_Variable) {
+      const { uid, type, name, func } = f
+
+      const uiConfig = typeof f.uiConfig == "function" ? await f.uiConfig() : f.uiConfig || {}
+      // const _schema = typeof f.schema == "function" ? f.schema() : f.schema || {}
+      //@ts-ignore
+      const ctx = { uid, type, name, uiConfig, input: {} } as Partial<URPC_Function>
+      const input = (typeof f.input == 'function' ? await f.input(v) : f.input) || {}
 
       await Promise.all(Object.entries(input).map(async ([k, v]: [string, any]) => {
-        let input = v
-        if (v.get) {
-          const cls = v as URPC_Class
-          const val = await cls.get()
-          input = val.default
-
-          if (val.enums) {
-            set(ctx, `uiConfig[${k}].selectOptions`, val.enums.map(e => ({ label: e.label ?? e, value: e.value ?? e })))
-          }
-        }
+        const input = typeof v == "function" ? await v() : v
         //@ts-ignore
-        ctx.input[k] = input
+        if (!ctx.uiConfig[k]) {
+          //@ts-ignore
+          ctx.uiConfig[k] = {}
+        }
+        if (input.uiConfig) {
+          //@ts-ignore
+          Object.assign(ctx.uiConfig[k], input.uiConfig)
+        }
+
+        if (input.enums) {
+          set(ctx, `uiConfig[${k}].selectOptions`, input.enums.map(e => ({ label: e.label ?? e, value: e.value ?? e })))
+        }
+
+        //@ts-ignore
+        ctx.input[k] = input.default
       }))
       return ctx
     },
-    async formatSchema(ctx: URPC_Entity) {
-      if (ctx.schema) {
-        await Promise.all(Object.entries(ctx.schema).map(async ([k, s]) => {
-          if (!s) return
-          //@ts-ignore
-          if (s.schema) {
+    async formatSchema(ctx: URPC_Variable) {
+      if (ctx._schema) {
+        let value = Array.isArray(ctx.value) && typeof ctx.value[0] == "object" ? ctx.value[0] : ctx.value
+        if (ctx.value) {
+          Object.entries(value).map(([k, v]) => {
             //@ts-ignore
-            s.schema = s.schema(ctx.value)
-          }
-          if (s.type) {
-            if (typeof s.type == "string") {
-
-            } else {
-              //@ts-ignore
-              const val = await s.type.get()
-              if (val.enums) {
-                set(s, `uiConfig.selectOptions`, val.enums.map(e => ({ label: e.label ?? e, value: e.value ?? e })))
-              }
-            }
-          }
+            if (ctx._schema[k]) return
+            //@ts-ignore
+            ctx._schema[k] = { type: typeof v, default: v }
+          })
+        }
+        await Promise.all(Object.entries(ctx._schema).map(async ([k, v]) => {
+          if (!v) return
+          const s = typeof v == "function" ? v() : v
           //@ts-ignore
+          ctx._schema[k] = s
+          const sc = s as URPC_Class
+
+          if (sc.enums) {
+            //@ts-ignore
+            set(ctx._schema[k], `uiConfig.selectOptions`, sc.enums.map(e => ({ label: e.label ?? e, value: e.value ?? e })))
+          }
+
+
           if (s.uiConfig && typeof s.uiConfig == "function") {
             //@ts-ignore
             s.uiConfig = s.uiConfig()
@@ -251,10 +235,11 @@ export class URPC<T extends URPC_Schema = any> {
           //@ts-ignore
           if (s.input) {
             //@ts-ignore
-            ctx.schema[k] = await URPC.utils.formatFunc(s)
+            ctx._schema[k] = await URPC.utils.formatFunc(s, ctx)
           }
         }))
       }
+
     }
   }
 
@@ -270,18 +255,7 @@ export class URPC<T extends URPC_Schema = any> {
         return URPC.utils.formatFunc(v as URPC_Function)
       }
       if (v.type == "var") {
-        const { uid, type, get, name, patch } = v as URPC_Variable
-        const value = await get()
-        const _schema = v.schema ? v.schema(value) : {}
-
-        const ctx = { uid, type, name, value, set: !!v.set, patch, schema: _schema }
-        //@ts-ignore
-        await URPC.utils.formatSchema(ctx)
-        //@ts-ignore
-
-        v._schema = ctx.schema
-
-        return ctx
+        return URPC.utils.formatVar(v as URPC_Variable)
       }
       return { type: "unknown", name: k }
     }))

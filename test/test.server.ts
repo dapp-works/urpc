@@ -11,40 +11,43 @@ let data = {
   enum_item: "Apple",
   enums: ["Apple", "Banana", "Orange"],
 };
-let collections = [{ name: "Data1" }, { name: "Data2" }]
+let collections = [{ foo: "Data1", bool: true, enum_item: "Apple" }, { foo: "Data1", bool: true, enum_item: "Apple" }]
 
 
-const fruit = URPC.enum(() => ({
+const fruit = URPC.type(() => ({
   enums: data.enums,
-  default: "Apple"
+  default: "Apple",
+  uiConfig: {
+    required: true,
+  }
 }))
 
-const func1 = URPC.Func({
-  input: { test: data.foo, add_fruit: fruit },
-  func: ({ input }) => {
-    data.enums.push(input.add_fruit)
-  },
-})
-
 const test = {
+  update: URPC.Func({
+    input: { fruit },
+    func: ({ input, val }) => {
+      data = Object.assign(data, input)
+    },
+  }),
   test: URPC.Var({
     get: async () => data,
-    schema: () => ({
-      enum_item: {
-        type: fruit
-      }
+    schema: (val) => ({
+      enum_item: fruit,
+      update: URPC.Func({
+        input: (ctx) => {
+          const { enum_item, bool, foo, enums } = ctx._schema!
+          return { enum_item, bool, foo, enums }
+        },
+        func: ({ input, val }) => {
+          data = Object.assign(data, input)
+        },
+      })
     }),
-    set: async (val) => {
-      const newVal = Object.assign(data, val)
-      return newVal
-    },
+
   }),
 }
 
-
-
 const object = {
-  func1,
   sum1: URPC.Func({
     input: { a: 0, b: 0 },
     func: ({ input }) => input.a + input.b,
@@ -52,26 +55,24 @@ const object = {
   collections: URPC.Var({
     get: async () => collections,
     schema: (val) => ({
-      name: {
-        uiConfig: {
-          required: true,
-        }
-      },
-      log: URPC.Action({
-        input: { i: 0, fruit },
+      enum_item: fruit,
+      update: URPC.Action({
+        input: (ctx) => {
+          const { enum_item, bool, foo } = ctx._schema!
+          return { enum_item, bool, foo }
+        },
         func: ({ input, val }) => {
           console.log(val)
         },
       }),
       create: URPC.Func({
-        input: { name: "", fruit },
-        func: ({ input, val }) => {
-          collections.push({ name: input.name })
+        input: (ctx) => {
+          const { enum_item, bool, foo } = ctx._schema!
+          return { enum_item, bool, foo }
         },
-        uiConfig: {
-          name: {
-            required: true,
-          }
+        func: ({ input, val }) => {
+          console.log({ input, val })
+          return true
         }
       }),
     })
@@ -81,7 +82,8 @@ const object = {
 
 export const urpc = new URPC({
   schemas: {
-    test, object
+    test,
+    object
   }
 })
 

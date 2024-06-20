@@ -1,6 +1,6 @@
 {
   "name": "@dappworks/urpc",
-  "version": "0.0.51",
+  "version": "0.0.54",
   "module": "index.ts",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -36,7 +36,6 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "fast-json-patch": "^3.1.1",
     "json-schema": "^0.4.0",
     "lodash.get": "^4.4.2",
     "lodash.keyby": "^4.6.0",
