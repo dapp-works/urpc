@@ -58,7 +58,7 @@ const object = {
       enum_item: fruit,
       update: URPC.Action({
         input: (ctx) => {
-          const { enum_item, bool, foo } = ctx._schema!
+          const { enum_item, bool, foo } = ctx._schema
           return { enum_item, bool, foo }
         },
         func: ({ input, val }) => {
@@ -67,7 +67,7 @@ const object = {
       }),
       create: URPC.Func({
         input: (ctx) => {
-          const { enum_item, bool, foo } = ctx._schema!
+          const { enum_item, bool, foo } = ctx._schema
           return { enum_item, bool, foo }
         },
         func: ({ input, val }) => {

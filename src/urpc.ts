@@ -81,7 +81,7 @@ export interface URPC_Variable<
   get: G
   value: R
   schema?: URPC_SchemaField<R, URPC_Variable<G, R>>
-  _schema?: InferSchema<R, URPC_Variable<G, R>['schema']>
+  _schema: InferSchema<R, URPC_Variable<G, R>['schema']>
   set?: (val: R) => any
 }
 
