@@ -74,10 +74,12 @@ const object = {
     schema: ({ v, val, ctx }) => ({
       enum_item: fruit,
       update: URPC.Action({
+        // use: [auth({ allow_teams: ["bd", "operator"] })],
         input: () => {
           return { enum_item: fruit, }
         },
         func: ({ input, val }) => {
+          input.enum_item
           console.log(val)
         },
       }),

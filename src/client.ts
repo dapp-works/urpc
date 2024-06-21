@@ -105,7 +105,7 @@ export const createServerClient = <C extends any = any, T extends URPC_Schema = 
         if (!ufunc) {
           throw new Error("invalid func name")
         }
-        return ufunc.func(params)
+        return ufunc.func(params) ?? { ok: true }
       }
     },
     var: {
@@ -130,7 +130,7 @@ export const createServerClient = <C extends any = any, T extends URPC_Schema = 
           throw new Error("invalid action name")
         }
         //@ts-ignore
-        return action.func({ ...params, val: params.value })
+        return action.func({ ...params, val: params.value }) ?? { ok: true }
       },
       async call(params: { name: string, method: string, value: any, input?: any, }) {
         const uvar = (urpc.uidSchemas[params.name] || urpc.falttenSchema[params.name]) as URPC_Variable
@@ -143,7 +143,7 @@ export const createServerClient = <C extends any = any, T extends URPC_Schema = 
         }
         params.value = uvar.value
         //@ts-ignore
-        return func.func({ ...params, val: uvar.value })
+        return func.func({ ...params, val: uvar.value }) ?? { ok: true }
       },
     }
   }

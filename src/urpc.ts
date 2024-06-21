@@ -49,6 +49,7 @@ export type URPC_Action<T extends Object = {}, R extends any = any, V extends UR
   type?: "action"
   input: T | ((args: V) => T)
   confirm?: boolean
+  use?: URPC_Middleware<any>[]
   func?: (args: { input: URPC_Input<T>, val: Item<R> }) => any
   uiConfig?: FormConfigItem
   // schema?: URPC_SchemaField<R>
