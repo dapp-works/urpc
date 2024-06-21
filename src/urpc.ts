@@ -38,10 +38,11 @@ export type URPC_Class<T extends any = any> = {
   enums: T[] | { label: T, value: T }[]
   default: T
   uiConfig?: FormConfigItem
+  schema?: URPC_SchemaField<any>
 }
 
 export type URPC_Input<T> = {
-  [K in keyof T]: T[K] extends URPC_Class<infer G>
+  [K in keyof T]: T[K] extends () => URPC_Class<infer G>
   ? G
   : T[K];
 }
@@ -116,7 +117,7 @@ export class URPC<T extends URPC_Schema = any> {
   uidSchemas: URPC_Schema
 
 
-  static type<T extends any = any>(get: () => URPC_Class<T>): () => URPC_Class<T> {
+  static type<T extends any = any>(get: (() => URPC_Class<T>)): () => URPC_Class<T> {
     return get
   }
 

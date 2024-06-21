@@ -55,11 +55,11 @@ const object = {
   collections: URPC.Var({
     get: async () => collections,
     schema: (val) => ({
+
       enum_item: fruit,
       update: URPC.Action({
         input: (ctx) => {
-          const { enum_item, bool, foo } = ctx._schema
-          return { enum_item, bool, foo }
+          return { enum_item: fruit, }
         },
         func: ({ input, val }) => {
           console.log(val)
