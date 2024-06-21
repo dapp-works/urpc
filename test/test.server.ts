@@ -22,6 +22,7 @@ const fruit = URPC.type(() => ({
   }
 }))
 
+
 const test = {
   update: URPC.Func({
     input: { fruit },
@@ -31,11 +32,11 @@ const test = {
   }),
   test: URPC.Var({
     get: async () => data,
-    schema: (val) => ({
+    schema: ({ v }) => ({
       enum_item: fruit,
       update: URPC.Func({
-        input: (ctx) => {
-          const { enum_item, bool, foo, enums } = ctx._schema!
+        input: (v) => {
+          const { enum_item, bool, foo, enums } = v._schema!
           return { enum_item, bool, foo, enums }
         },
         func: ({ input, val }) => {
@@ -51,14 +52,25 @@ const auth = (args: { allow_teams: string[] }) => URPC.middleware<Context>({
   filter: ctx => !!ctx.user.isSuperAdmin || !!ctx.user.teams?.some(i => args.allow_teams.includes(i))
 })
 
+
 const object = {
   sum1: URPC.Func({
     input: { a: 0, b: 0 },
-    use: [auth({ allow_teams: ["bd", "operator"] })],
+    meta: {
+      layoutConfig: {
+        filedLayout: ['a', 'b']
+      }
+    },
+    // use: [auth({ allow_teams: ["bd", "operator"] })],
     func: ({ input }) => input.a + input.b,
   }),
   collections: URPC.Var({
     get: async () => collections,
+    meta: {
+      layoutConfig: {
+        filedLayout: ["bool", ["enum_item", "foo"]]
+      }
+    },
     schema: ({ v, val, ctx }) => ({
       enum_item: fruit,
       update: URPC.Action({
@@ -83,7 +95,6 @@ const object = {
     })
   })
 }
-
 
 export const urpc = new URPC({
   schemas: {

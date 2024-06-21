@@ -4,7 +4,6 @@ import { v4 as uuid } from "uuid"
 import keyby from "lodash.keyby"
 import set from "lodash.set"
 
-
 export type FormConfigType<T> = {
   [F in keyof T]?: Item<FormConfigItem>
 }
@@ -26,19 +25,17 @@ type ExtractReturnType<T> = T extends (...args: any[]) => infer R ? R : never;
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 
 
-
-
-// export type URPC_ClassGet = () => {
-//   enums?: any[] | { label: any, value: any }[]
-//   default?: any
-// }
+export type LayoutInput<R extends any = any> = {
+  [key in keyof R]: string
+}
 
 export type URPC_Class<T extends any = any> = {
-  type?: string | URPC_Class
-  enums: T[] | { label: T, value: T }[]
-  default: T
+  type?: string
+  class?: string
+  enums?: T[] | { label: T, value: T }[]
+  default?: T
   uiConfig?: FormConfigItem
-  schema?: URPC_SchemaField<T, any>
+  schema?: URPC_SchemaField<T>
 }
 
 export type URPC_Input<T> = {
@@ -58,39 +55,49 @@ export type URPC_Action<T extends Object = {}, R extends any = any, V extends UR
 }
 
 
+type NestedArray<T> = Array<T | NestedArray<T>>;
+export interface URPC_Meta<R extends any = any> {
+  layoutConfig?: {
+    $type?: string,
+    title?: string,
+    filedLayout: NestedArray<keyof Item<R>>
+  }
+}
+
+
 export interface URPC_Function<T extends Object = {}, R extends any = any, I extends any = any, V extends URPC_Variable = any> {
   uid: string
   type?: "func"
   name?: string
   path?: string
   confirm?: boolean
-  use?: URPC_Middleware[]
+  meta?: URPC_Meta<URPC_Input<T>>
+  use?: URPC_Middleware<any>[]
   input: T | ((args: V) => T)
   func: (args: { input: URPC_Input<T>, val?: R extends {} ? R : undefined }) => I
   uiConfig?: (() => FormConfigType<T>) | FormConfigType<T>
   // schema?: URPC_SchemaField<R>
 }
 
-
 export interface URPC_Variable<
   G extends () => any = () => any,
   R extends UnwrapPromise<ReturnType<G>> = UnwrapPromise<ReturnType<G>>,
-  M extends any = { [key: string]: any }
+  M extends any = any
 > {
   uid: string
   type?: "var"
   name?: string
   path?: string
-  meta?: M
+  meta?: URPC_Meta<R>
   get: G
-  use?: URPC_Middleware[]
+  use?: URPC_Middleware<any>[]
   value: R
   schema?: URPC_SchemaField<R, URPC_Variable<G, R>>
   _schema: InferSchema<R, URPC_Variable<G, R>['schema']>
   set?: (val: R) => any
 }
 
-type SchemaItem<T extends Object = {}, R extends any = any, V extends URPC_Variable = any> = (() => URPC_Class) | URPC_Class | URPC_Action<T, R, V> | URPC_Function<T, R, any, V>
+type SchemaItem<T extends Object = {}, R extends any = any, V extends URPC_Variable = any> = (() => URPC_Class<any>) | URPC_Action<T, R, V> | URPC_Function<T, R, any, V>
 
 
 type InferSchema<R, S> = S extends URPC_SchemaField<R>
@@ -134,12 +141,13 @@ export class URPC<T extends URPC_Schema = any> {
     return get
   }
 
+
   static Namespace(args: URPC_Entity): URPC_Entity {
     return args
   }
 
 
-  static Var<G extends () => any, R extends UnwrapPromise<ReturnType<G>> = UnwrapPromise<ReturnType<G>>, M extends any = any>(args: Partial<URPC_Variable<G, R, M>>): URPC_Variable<G, R, M> {
+  static Var<G extends () => any, R extends UnwrapPromise<ReturnType<G>> = UnwrapPromise<ReturnType<G>>>(args: Partial<URPC_Variable<G, R>>): URPC_Variable<G, R> {
     if (!args.get) throw new Error("invalid Var params")
     const get = args.get
     //@ts-ignore
@@ -148,7 +156,7 @@ export class URPC<T extends URPC_Schema = any> {
       args.value = value
       return value
     }
-    return { ...args, type: "var", uid: uuid(), } as URPC_Variable<G, R, M>
+    return { ...args, type: "var", uid: uuid(), } as URPC_Variable<G, R>
   }
   static Func<T extends Object = {}, R extends any = any, I extends any = any, V extends URPC_Variable = any>(args: Partial<URPC_Function<T, R, I, V>>): URPC_Function<T, R, I, V> {
     const ctx = { ...args, type: "func", uid: uuid() } as URPC_Function<T, R, I, V>
@@ -169,11 +177,11 @@ export class URPC<T extends URPC_Schema = any> {
 
   static utils = {
     async formatVar(v: URPC_Variable, ctx: any) {
-      const { uid, type, get, name } = v as URPC_Variable
+      const { uid, type, get, name, meta } = v as URPC_Variable
       const value = await get()
       const _schema = v.schema ? v.schema({ val: value, v, ctx }) : {}
 
-      const data = { uid, type, name, value, set: !!v.set, _schema }
+      const data = { uid, type, name, value, set: !!v.set, _schema, meta }
       v._schema = data._schema
 
       //@ts-ignore
@@ -191,12 +199,12 @@ export class URPC<T extends URPC_Schema = any> {
     },
 
     async formatFunc(f: URPC_Function, v?: URPC_Variable) {
-      const { uid, type, name, func } = f
+      const { uid, type, name, func, meta } = f
 
       const uiConfig = typeof f.uiConfig == "function" ? await f.uiConfig() : f.uiConfig || {}
       // const _schema = typeof f.schema == "function" ? f.schema() : f.schema || {}
       //@ts-ignore
-      const data = { uid, type, name, uiConfig, func, input: {} } as Partial<URPC_Function>
+      const data = { uid, type, name, uiConfig, func, input: {}, meta } as Partial<URPC_Function>
       const input = (typeof f.input == 'function' ? await f.input(v) : f.input) || {}
 
       await Promise.all(Object.entries(input).map(async ([k, v]: [string, any]) => {
@@ -228,7 +236,7 @@ export class URPC<T extends URPC_Schema = any> {
             //@ts-ignore
             if (data._schema[k]) return
             //@ts-ignore
-            data._schema[k] = { type: typeof v, default: v }
+            data._schema[k] = { type: "type", class: typeof v, default: v }
           })
         }
         //@ts-ignore
