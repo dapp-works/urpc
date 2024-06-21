@@ -47,18 +47,23 @@ const test = {
   }),
 }
 
+const auth = (args: { allow_teams: string[] }) => URPC.middleware<Context>({
+  filter: ctx => !!ctx.user.isSuperAdmin || !!ctx.user.teams?.some(i => args.allow_teams.includes(i))
+})
+
 const object = {
   sum1: URPC.Func({
     input: { a: 0, b: 0 },
+    use: [auth({ allow_teams: ["bd", "operator"] })],
     func: ({ input }) => input.a + input.b,
   }),
   collections: URPC.Var({
     get: async () => collections,
-    schema: (val) => ({
-
+    use: [auth({ allow_teams: ["bd", "operator"] })],
+    schema: ({ v, val, ctx }) => ({
       enum_item: fruit,
       update: URPC.Action({
-        input: (ctx) => {
+        input: () => {
           return { enum_item: fruit, }
         },
         func: ({ input, val }) => {
@@ -66,8 +71,8 @@ const object = {
         },
       }),
       create: URPC.Func({
-        input: (ctx) => {
-          const { enum_item, bool, foo } = ctx._schema
+        input: () => {
+          const { enum_item, bool, foo } = v._schema
           return { enum_item, bool, foo }
         },
         func: ({ input, val }) => {
@@ -86,15 +91,27 @@ export const urpc = new URPC({
     object
   }
 })
+export type Context = {
+  user: {
+    isSuperAdmin?: boolean
+    teams?: string[]
+  }
+}
 
-
-export const serverClient = createServerClient({ urpc })
+export const serverClient = createServerClient<Context>({ urpc })
 
 const app = new Hono()
 app.use(cors())
 app.post('/urpc', async (c) => {
   const body = await c.req.json() as any
-  const res = await serverClient.handle(body)
+  // TODO: decode jwt token 
+  const ctx: Context = {
+    user: {
+      // isSuperAdmin: true,
+      // teams: ["bd", "operator"]
+    }
+  }
+  const res = await serverClient.handle(body, ctx)
   return c.json(res)
 })
 

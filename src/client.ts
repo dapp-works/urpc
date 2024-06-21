@@ -79,16 +79,17 @@ export const createSimpleHttpClient = <T extends URPC_Schema>(args: { url: strin
   }
 }
 
-export const createServerClient = <T extends URPC_Schema>({ urpc }: { urpc: URPC<T> }) => {
+export const createServerClient = <C extends any = any, T extends URPC_Schema = URPC_Schema>({ urpc }: { urpc: URPC<T> }) => {
   const client = {
     urpc,
-    handle({ name, params }: { name: string, params: Record<string, any> }) {
+    handle({ name, params = {} }: { name: string, params: Record<string, any> }, ctx?: C) {
       const func = get(client, name)
       // console.log(name, params)
       if (!func) {
         throw new Error("invalid name")
       }
-      return func(params)
+      params.ctx = ctx
+      return func(params, ctx)
     },
     schema: {
       async loadFull(params: Parameters<URPC<T>["loadFull"]>[0]) {
