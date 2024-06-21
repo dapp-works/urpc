@@ -171,7 +171,6 @@ export class URPC<T extends URPC_Schema = any> {
       ctx._schema = undefined
 
 
-
       return ctx
     },
 
@@ -181,7 +180,7 @@ export class URPC<T extends URPC_Schema = any> {
       const uiConfig = typeof f.uiConfig == "function" ? await f.uiConfig() : f.uiConfig || {}
       // const _schema = typeof f.schema == "function" ? f.schema() : f.schema || {}
       //@ts-ignore
-      const ctx = { uid, type, name, uiConfig, input: {} } as Partial<URPC_Function>
+      const ctx = { uid, type, name, uiConfig, func, input: {} } as Partial<URPC_Function>
       const input = (typeof f.input == 'function' ? await f.input(v) : f.input) || {}
 
       await Promise.all(Object.entries(input).map(async ([k, v]: [string, any]) => {
