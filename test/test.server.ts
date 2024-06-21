@@ -59,7 +59,6 @@ const object = {
   }),
   collections: URPC.Var({
     get: async () => collections,
-    use: [auth({ allow_teams: ["bd", "operator"] })],
     schema: ({ v, val, ctx }) => ({
       enum_item: fruit,
       update: URPC.Action({
@@ -71,6 +70,7 @@ const object = {
         },
       }),
       create: URPC.Func({
+        // use: [auth({ allow_teams: ["bd", "operator"] })],
         input: () => {
           const { enum_item, bool, foo } = v._schema
           return { enum_item, bool, foo }

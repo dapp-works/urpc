@@ -177,7 +177,10 @@ export class URPC<T extends URPC_Schema = any> {
       v._schema = data._schema
 
       //@ts-ignore
-      await URPC.utils.formatSchema(data)
+      await URPC.utils.formatSchema(data, ctx)
+
+
+
       //@ts-ignore
       data.schema = data._schema
       //@ts-ignore
@@ -228,12 +231,20 @@ export class URPC<T extends URPC_Schema = any> {
             data._schema[k] = { type: typeof v, default: v }
           })
         }
-        await Promise.all(Object.entries(data._schema).map(async ([k, v]) => {
-          if (!v) return
-          const s = typeof v == "function" ? v() : v
+        //@ts-ignore
+        data._schema = (await Promise.all(Object.entries(data._schema).filter(([k, v]) => {
           //@ts-ignore
-          data._schema[k] = s
-          const sc = s as URPC_Class
+          if (v.use) {
+            //@ts-ignore
+            return (v.use as URPC_Middleware[]).filter(i => !!i.filter).every(i => i.filter!(ctx) == true)
+          }
+          return true
+        }).map(async ([k, v]) => {
+          if (!v) return
+          let s = typeof v == "function" ? v() : v
+          //@ts-ignore
+          // data._schema[k] = s
+          let sc = s as URPC_Class
 
           if (sc.enums) {
             //@ts-ignore
@@ -248,9 +259,15 @@ export class URPC<T extends URPC_Schema = any> {
           //@ts-ignore
           if (s.input) {
             //@ts-ignore
-            data._schema[k] = await URPC.utils.formatFunc(s, data)
+            s = await URPC.utils.formatFunc(s, data)
           }
-        }))
+          return [k, s]
+          //@ts-ignore
+        }))).reduce((p, c) => {
+          //@ts-ignore
+          p[c[0]] = c[1]
+          return p
+        }, {})
       }
 
     }
