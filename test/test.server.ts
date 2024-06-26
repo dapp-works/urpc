@@ -35,9 +35,9 @@ const test = {
     schema: ({ v }) => ({
       enum_item: fruit,
       update: URPC.Func({
-        input: (v) => {
-          const { enum_item, bool, foo, enums } = v._schema!
-          return { enum_item, bool, foo, enums }
+        input: () => {
+          const { enum_item, bool, foo, enums } = v._schema
+          return { enum_item, bool: fruit, foo, enums }
         },
         func: ({ input, val }) => {
           data = Object.assign(data, input)
@@ -71,16 +71,18 @@ const object = {
         filedLayout: ["bool", ["enum_item", "foo"]]
       }
     },
-    schema: ({ v, val, ctx }) => ({
+    schema: ({ v, val }) => ({
       enum_item: fruit,
       update: URPC.Action({
         // use: [auth({ allow_teams: ["bd", "operator"] })],
         input: () => {
-          return { enum_item: fruit, }
+          const { enum_item, bool, foo } = v._schema
+          return { enum_item: fruit, bool, foo, test: 1 }
         },
         func: ({ input, val }) => {
           input.enum_item
-          console.log(val)
+          input.foo
+          input.test
         },
       }),
       create: URPC.Func({

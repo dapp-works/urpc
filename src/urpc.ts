@@ -38,16 +38,10 @@ export type URPC_Class<T extends any = any> = {
   schema?: URPC_SchemaField<T>
 }
 
-export type URPC_Input<T> = {
-  [K in keyof T]: T[K] extends () => URPC_Class<infer G>
-  ? G
-  : T[K];
-}
 
-
-export type URPC_Action<T extends Object = {}, R extends any = any, V extends URPC_Variable = any> = {
+export type URPC_Action<T extends any = any, R extends any = any, V extends URPC_Variable = any> = {
   type?: "action"
-  input: T | ((args: V) => T)
+  input: T | (() => T)
   confirm?: boolean
   use?: URPC_Middleware<any>[]
   func?: (args: { input: URPC_Input<T>, val: Item<R> }) => any
@@ -66,7 +60,7 @@ export interface URPC_Meta<R extends any = any> {
 }
 
 
-export interface URPC_Function<T extends Object = {}, R extends any = any, I extends any = any, V extends URPC_Variable = any> {
+export interface URPC_Function<T extends any = any, VarValue extends any = any, I extends any = any, Var extends URPC_Variable = any> {
   uid: string
   type?: "func"
   name?: string
@@ -74,44 +68,50 @@ export interface URPC_Function<T extends Object = {}, R extends any = any, I ext
   confirm?: boolean
   meta?: URPC_Meta<URPC_Input<T>>
   use?: URPC_Middleware<any>[]
-  input: T | ((args: V) => T)
-  func: (args: { input: URPC_Input<T>, val?: R extends {} ? R : undefined }) => I
+  input: T | ((args: Var) => T)
+  func: (args: { input: URPC_Input<T>, val?: VarValue extends {} ? VarValue : undefined }) => I
   uiConfig?: (() => FormConfigType<T>) | FormConfigType<T>
   // schema?: URPC_SchemaField<R>
 }
 
 export interface URPC_Variable<
-  G extends () => any = () => any,
-  R extends UnwrapPromise<ReturnType<G>> = UnwrapPromise<ReturnType<G>>,
+  Get extends () => any = () => any,
+  VarValue extends UnwrapPromise<ReturnType<Get>> = UnwrapPromise<ReturnType<Get>>,
   M extends any = any
+
 > {
   uid: string
   type?: "var"
   name?: string
   path?: string
-  meta?: URPC_Meta<R>
-  get: G
+  meta?: URPC_Meta<VarValue>
+  get: Get
   use?: URPC_Middleware<any>[]
-  value: R
-  schema?: URPC_SchemaField<R, URPC_Variable<G, R>>
-  _schema: InferSchema<R, URPC_Variable<G, R>['schema']>
-  set?: (val: R) => any
+  value: VarValue
+  schema?: URPC_SchemaField<Item<VarValue>, URPC_Variable<Get, VarValue>>
+  _schema: InferSchema<Get, VarValue>
+  set?: (val: VarValue) => any
 }
 
-type SchemaItem<T extends Object = {}, R extends any = any, V extends URPC_Variable = any> = (() => URPC_Class<any>) | URPC_Action<T, R, V> | URPC_Function<T, R, any, V>
+// Improved URPC_Input type
+export type URPC_Input<T> = {
+  [K in keyof T]: T[K] extends (() => URPC_Class<infer G>)
+  ? G
+  : T[K];
+};
 
 
-type InferSchema<R, S> = S extends URPC_SchemaField<R>
-  ? {
-    [K in keyof ReturnType<S>]: ReturnType<S>[K];
-  }
-  : never;
+
+type InferSchema<Get extends () => any, VarValue extends UnwrapPromise<ReturnType<Get>>, S = ReturnType<URPC_SchemaField<Item<VarValue>, URPC_Variable<Get, VarValue>>>>
+  = Required<{
+    [K in keyof S]: S[K]
+  }>
 
 
 export type URPC_SchemaField<R extends any = any, V extends URPC_Variable = any> = (args: { v: V, val: R, ctx: any }) => {
-  [F in keyof Item<R>]?: SchemaItem<any, R, V>
+  [F in keyof R]?: () => URPC_Class<R[F]>
 } & {
-  [key: string]: SchemaItem<any, R, V>
+  [key: string]: (() => URPC_Class<any>) | URPC_Action<any, R, V> | URPC_Function<any, R, any, V>
 }
 
 export type URPC_Middleware<C extends any = any> = {
@@ -159,11 +159,11 @@ export class URPC<T extends URPC_Schema = any> {
     }
     return { ...args, type: "var", uid: uuid(), } as URPC_Variable<G, R>
   }
-  static Func<T extends Object = {}, R extends any = any, I extends any = any, V extends URPC_Variable = any>(args: Partial<URPC_Function<T, R, I, V>>): URPC_Function<T, R, I, V> {
+  static Func<T extends any = any, R extends any = any, I extends any = any, V extends URPC_Variable = any>(args: Partial<URPC_Function<T, R, I, V>>): URPC_Function<T, R, I, V> {
     const ctx = { ...args, type: "func", uid: uuid() } as URPC_Function<T, R, I, V>
     return ctx
   }
-  static Action<T extends Object = {}, R extends any = any, V extends URPC_Variable = any>(args: Partial<URPC_Action<T, R, V>>): URPC_Action<T, R, V> {
+  static Action<T extends any = any, R extends any = any, V extends URPC_Variable = any>(args: Partial<URPC_Action<T, R, V>>): URPC_Action<T, R, V> {
     return { ...args, type: "action", uid: uuid() } as URPC_Action<T, R, V>
   }
 
@@ -314,5 +314,3 @@ export class URPC<T extends URPC_Schema = any> {
     }))
   }
 }
-
-
