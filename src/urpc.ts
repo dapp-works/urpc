@@ -89,7 +89,7 @@ export interface URPC_Variable<
   use?: URPC_Middleware<any>[]
   value: VarValue
   schema?: URPC_SchemaField<Item<VarValue>, URPC_Variable<Get, VarValue>>
-  _schema: InferSchema<Get, VarValue>
+  _schema: Required<ReturnType<URPC_SchemaField<Item<VarValue>, URPC_Variable<Get, VarValue>>>>
   set?: (val: VarValue) => any
 }
 
@@ -101,11 +101,6 @@ export type URPC_Input<T> = {
 };
 
 
-
-type InferSchema<Get extends () => any, VarValue extends UnwrapPromise<ReturnType<Get>>, S = ReturnType<URPC_SchemaField<Item<VarValue>, URPC_Variable<Get, VarValue>>>>
-  = Required<{
-    [K in keyof S]: S[K]
-  }>
 
 
 export type URPC_SchemaField<R extends any = any, V extends URPC_Variable = any> = (args: { v: V, val: R, ctx: any }) => {
