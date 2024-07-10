@@ -14,6 +14,7 @@ let data = {
 let collections = [{ foo: "Data1", bool: true, enum_item: "Apple" }, { foo: "Data1", bool: true, enum_item: "Apple" }]
 
 
+
 const fruit = URPC.type(() => ({
   enums: data.enums,
   default: "Apple",
@@ -66,11 +67,6 @@ const object = {
   }),
   collections: URPC.Var({
     get: async () => collections,
-    meta: {
-      layoutConfig: {
-        filedLayout: ["bool", ["enum_item", "foo"]]
-      }
-    },
     schema: ({ v, val }) => ({
       enum_item: fruit,
       update: URPC.Action({

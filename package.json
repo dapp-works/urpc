@@ -1,45 +1,9 @@
 {
-  "name": "@dappworks/urpc",
-  "version": "0.0.66",
+  "name": "workspace",
+  "private": true,
   "module": "index.ts",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "scripts": {
-    "build": "bun run build.mjs",
-    "prepublishOnly": "bun run build"
-  },
-  "files": [
-    "dist"
-  ],
-  "license": "MIT",
-  "devDependencies": {
-    "@rjsf/utils": "^5.18.4",
-    "@types/bun": "latest",
-    "@types/json-schema": "^7.0.15",
-    "@types/lodash.get": "^4.4.9",
-    "@types/uuid": "^9.0.8",
-    "bun-plugin-dts": "^0.2.3",
-    "hono": "^4.4.6"
-  },
-  "peerDependencies": {
-    "typescript": "^5.4.5"
-  },
-  "homepage": "https://github.com/dapp-works/urpc",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/dapp-works/urpc.git"
-  },
-  "bugs": "https://github.com/dapp-works/urpc/issues",
-  "author": "uuz <ncysatnaf@gmail.com>",
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
-  },
-  "dependencies": {
-    "json-schema": "^0.4.0",
-    "lodash.get": "^4.4.2",
-    "lodash.keyby": "^4.6.0",
-    "lodash.set": "^4.3.2",
-    "uuid": "^9.0.1"
-  }
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ]
 }
