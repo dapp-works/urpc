@@ -56,14 +56,16 @@ const auth = (args: { allow_teams: string[] }) => URPC.middleware<Context>({
 
 const object = {
   sum1: URPC.Func({
-    input: { a: 0, b: 0 },
-    meta: {
-      layoutConfig: {
-        filedLayout: ['a', 'b']
-      }
-    },
+    input: { a: "text text text text text text text text text text text text text text text text text text text text text text text text text text text text ", b: 0 },
     // use: [auth({ allow_teams: ["bd", "operator"] })],
     func: ({ input }) => input.a + input.b,
+    uiConfig() {
+      return {
+        a: {
+          description: "test desc",
+        }
+      }
+    },
   }),
   collections: URPC.Var({
     get: async () => collections,

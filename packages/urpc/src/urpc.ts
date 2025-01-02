@@ -6,6 +6,8 @@ import set from "lodash.set"
 
 export type FormConfigType<T> = {
   [F in keyof T]?: Item<FormConfigItem>
+} & {
+  description?: string
 }
 
 export type ActionType<T> = {
@@ -70,7 +72,7 @@ export interface URPC_Function<T extends any = any, VarValue extends any = any, 
   use?: URPC_Middleware<any>[]
   input: T | ((args: Var) => T)
   func: (args: { input: URPC_Input<T>, val?: VarValue extends {} ? VarValue : undefined }) => I
-  uiConfig?: (() => FormConfigType<T>) | FormConfigType<T>
+  uiConfig?: ((() => FormConfigType<T>) | FormConfigType<T>)
   // schema?: URPC_SchemaField<R>
 }
 
