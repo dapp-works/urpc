@@ -17,7 +17,7 @@ let collections = [{ foo: "Data1", bool: true, enum_item: "Apple" }, { foo: "Dat
 
 const fruit = URPC.type(() => ({
   enums: data.enums,
-  default: "Apple",
+  default: "Banana",
   uiConfig: {
     required: true,
   }
