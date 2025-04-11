@@ -222,7 +222,15 @@ export class URPC<T extends URPC_Schema = any> {
         }
 
         //@ts-ignore
-        data.input[k] = input.default || input
+        // If default is empty and enums exist, use the first enum value as default
+        if ((!input.default || input.default === "") && input.enums && input.enums.length > 0) {
+          const firstEnum = input.enums[0];
+          //@ts-ignore
+          data.input[k] = typeof firstEnum === 'object' ? firstEnum.value : firstEnum;
+        } else {
+          //@ts-ignore
+          data.input[k] = input.default || input;
+        }
       }))
       return data
     },
